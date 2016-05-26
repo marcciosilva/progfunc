@@ -32,21 +32,38 @@ instance Show Error where
  show (ArrayAssignment ty) = "Array assignment: " ++ show ty
  show (Expected    ty ty') = "Expected: " ++ show ty ++ " Actual: " ++ show ty'
 
-
 checkProgram :: Program -> Either [Error] Env
-checkProgram (Program pn defs body) = do case checkVarDef defs of
-											Right env -> case checkBody body of
-																Right env -> Right env
-																Left err -> Left err
-											Left errVarDef -> Left errVarDef
+--checkProgram (Program pn defs body) = Right [("Jorge", TyInt)]
+checkProgram (Program pn defs body)  
+	| length defs == 0 && length body == 0 = Right []
+	| length defs == 0 = case checkBody body of
+							Right env -> Right env
+							Left err -> Left err
+	| length body == 0 = case checkVarDef defs of
+							Right env -> Right env
+							Left errVarDef -> Left errVarDef
+	| otherwise = case checkVarDef defs of
+					Right env -> case checkBody body of
+										Right env -> Right env
+										Left err -> Left err
+					Left errVarDef -> Left errVarDef
 
-checkVarDef :: [VarDef] -> [Error] -> Env -> Either [Error] Env
-checkVarDef vs errs env = 
-	| length vs == 0 && length errs == 0 >> return Right vs
-	| length vs == 0 && length errs != 0 >> return Left errs
-	| length vs != 0 = case checkSingleVar head vs env of
-							Right env -> (checkVarDef tail vs errs env) 
-							Left err -> (checkVarDef tail vs err:errs env)
+-- checkVarDef :: [VarDef] -> Either [Error] Env
+-- checkVarDef :: [VarDef] -> [Error] -> Env -> Either [Error] Env
+-- checkVarDef vs errs env = 
+-- 	| length vs == 0 && length errs == 0 >> return Right vs
+-- 	| length vs == 0 && length errs != 0 >> return Left errs
+-- 	| length vs != 0 = case checkSingleVar head vs env of
+-- 							Right env -> (checkVarDef tail vs errs env) 
+-- 							Left err -> (checkVarDef tail vs err:errs env)
+-- checkVarDef vs =
+-- 	| length vs == 0 | return Right 
 
-checkSingleVar :: VarDef -> Env -> Either Error Env
-checkSingleVar = 
+-- checkSingleVar :: VarDef -> Env -> Either Error Env
+-- checkSingleVar = 
+
+checkVarDef :: [VarDef] -> Either [Error] Env
+checkVarDef vs = Right [("Pirulo", TyInt)]
+
+checkBody :: [Stmt] -> Either [Error] Env
+checkBody bs = Right[("Jorge", TyInt)]

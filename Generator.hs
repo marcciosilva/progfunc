@@ -18,4 +18,7 @@ import Syntax
 
 
 genProgram :: Program -> Env -> String
-genProgram (Program pn dfs bdy) env = undefined -- Implementar
+genProgram (Program pn dfs bdy) env 
+	-- no variables defined
+	| length env == 0 && length bdy == 0 = "#include stdio.h \n void main() { \n }"
+	| otherwise = pn

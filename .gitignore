@@ -17,5 +17,6 @@ cabal.sandbox.config
 *.pas
 *.err
 *.pdf
+*.exe
 Makefile
 .stack-work/
