@@ -33,7 +33,6 @@ instance Show Error where
  show (Expected    ty ty') = "Expected: " ++ show ty ++ " Actual: " ++ show ty'
 
 checkProgram :: Program -> Either [Error] Env
---checkProgram (Program pn defs body) = Right [("Jorge", TyInt)]
 checkProgram (Program pn defs body)  
 	| length defs == 0 && length body == 0 = Right []
 	| length defs == 0 = case checkBody body of
@@ -46,20 +45,33 @@ checkProgram (Program pn defs body)
 					Right env -> case checkBody body of
 										Right env -> Right env
 										Left err -> Left err
+					-- si hay error en la declaracion no se
+					-- chequea el cuerpo
 					Left errVarDef -> Left errVarDef
 
 checkVarDef :: [VarDef] -> [Error] -> Env -> Either [Error] Env
 checkVarDef vs errs env
-	| length vs == 0 && length errs == 0 = Right env
-	| length vs == 0 && length errs /= 0 = Left errs
-	| length vs /= 0 = case checkSingleVar (head vs) env of
+	| (length vs) /= 0 = case checkSingleVar (head vs) env of
 							Right env -> checkVarDef (tail vs) errs env
-							Left err -> checkVarDef (tail vs) errs env --err:errs env)
+							-- agrego error al final para mostrar los 
+							-- errores en orden de ocurrencia
+							Left err -> checkVarDef (tail vs) (errs ++ [err]) env
+	| length errs /= 0 = Left errs							
+	| length errs == 0 = Right env	
 
--- en realidad esta funcion se encarga de cargar en env
--- el nombre y tipo de variable para cada vardef
 checkSingleVar :: VarDef -> Env -> Either Error Env
-checkSingleVar (VarDef name type1) env = Right (env ++ [(name, type1)])
+checkSingleVar (VarDef name type1) env 
+	-- Variable repetida
+	| containsVariable env (name, type1) = Left (Duplicated name)
+	-- agrego variable al final para declararlas 
+	-- en orden de ocurrencia en el .pas
+	| otherwise = Right (env ++ [(name, type1)])
+
 
 checkBody :: [Stmt] -> Either [Error] Env
 checkBody bs = Right[("Jorge", TyInt)]
+
+containsVariable :: Env -> (Name,Type) -> Bool
+-- si se repite el identificador, la lista queda de largo > 0
+containsVariable vs (name,ty) = length ([(name_temp, type_temp)| (name_temp, type_temp) <- vs, 
+	name_temp == name]) > 0
