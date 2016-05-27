@@ -56,7 +56,8 @@ checkVarDef vs errs env
 							-- agrego error al final para mostrar los 
 							-- errores en orden de ocurrencia
 							Left err -> checkVarDef (tail vs) (errs ++ [err]) env
-	| length errs /= 0 = Left errs							
+	| length errs /= 0 = Left errs			
+	-- se agregaron todas las vars a env sin errores				
 	| length errs == 0 = Right env	
 
 checkSingleVar :: VarDef -> Env -> Either Error Env
@@ -73,5 +74,7 @@ checkBody bs = Right[("Jorge", TyInt)]
 
 containsVariable :: Env -> (Name,Type) -> Bool
 -- si se repite el identificador, la lista queda de largo > 0
+-- genero lista con variables que tienen el mismo nombre que la del parametro
+-- si el largo es mayor a cero, esta duplicada
 containsVariable vs (name,ty) = length ([(name_temp, type_temp)| (name_temp, type_temp) <- vs, 
 	name_temp == name]) > 0

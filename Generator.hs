@@ -28,13 +28,15 @@ genProgram (Program pn dfs bdy) env
 printVariable :: (Name, Type) -> String
 printVariable (name, type1)
 	| type1 == TyInt = "int " ++ name ++ ";\n"
-	| type1 == TyBool = "bool " ++ name ++ ";\n"
+	-- los booleanos en c se expresan como int
+	-- el chequeo debe ir en la parte de body
+	| type1 == TyBool = "int " ++ name ++ ";\n"
 	| otherwise = printArray name type1
 
 printArray :: String -> Type -> String
 printArray name (TyArray i j type1)
 	| type1 == TyInt = "int _" ++ name ++ "[" ++ show (j-i+1) ++ "];\n"
-	| type1 == TyBool = "bool _" ++ name ++ "[" ++ show (j-i+1) ++ "];\n"
+	| type1 == TyBool = "int _" ++ name ++ "[" ++ show (j-i+1) ++ "];\n"
 	-- si es un array de arrays, primero imprimo el tipo, el nombre y el primer rango
 	-- y despues imprimo recursivamente los subrangos que vienen
 	| otherwise =  printArrayType type1 ++ " _" ++ name ++ "[" ++ show (j-i+1) ++ "]"
@@ -45,7 +47,7 @@ printArray name (TyArray i j type1)
 printArrayType :: Type -> String
 printArrayType (TyArray ini fin ty)
 	| ty == TyInt = "int"
-	| ty == TyBool = "bool"
+	| ty == TyBool = "int"
 	| otherwise = printArrayType ty
 
 -- imprime el subrango actual y el subrango siguiente recursivamente
