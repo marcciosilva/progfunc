@@ -39,31 +39,27 @@ checkProgram (Program pn defs body)
 	| length defs == 0 = case checkBody body of
 							Right env -> Right env
 							Left err -> Left err
-	| length body == 0 = case checkVarDef defs of
+	| length body == 0 = case checkVarDef defs [] [] of
 							Right env -> Right env
 							Left errVarDef -> Left errVarDef
-	| otherwise = case checkVarDef defs of
+	| otherwise = case checkVarDef defs [] [] of
 					Right env -> case checkBody body of
 										Right env -> Right env
 										Left err -> Left err
 					Left errVarDef -> Left errVarDef
 
--- checkVarDef :: [VarDef] -> Either [Error] Env
--- checkVarDef :: [VarDef] -> [Error] -> Env -> Either [Error] Env
--- checkVarDef vs errs env = 
--- 	| length vs == 0 && length errs == 0 >> return Right vs
--- 	| length vs == 0 && length errs != 0 >> return Left errs
--- 	| length vs != 0 = case checkSingleVar head vs env of
--- 							Right env -> (checkVarDef tail vs errs env) 
--- 							Left err -> (checkVarDef tail vs err:errs env)
--- checkVarDef vs =
--- 	| length vs == 0 | return Right 
+checkVarDef :: [VarDef] -> [Error] -> Env -> Either [Error] Env
+checkVarDef vs errs env
+	| length vs == 0 && length errs == 0 = Right env
+	| length vs == 0 && length errs /= 0 = Left errs
+	| length vs /= 0 = case checkSingleVar (head vs) env of
+							Right env -> checkVarDef (tail vs) errs env
+							Left err -> checkVarDef (tail vs) errs env --err:errs env)
 
--- checkSingleVar :: VarDef -> Env -> Either Error Env
--- checkSingleVar = 
-
-checkVarDef :: [VarDef] -> Either [Error] Env
-checkVarDef vs = Right [("Pirulo", TyInt)]
+-- en realidad esta funcion se encarga de cargar en env
+-- el nombre y tipo de variable para cada vardef
+checkSingleVar :: VarDef -> Env -> Either Error Env
+checkSingleVar (VarDef name type1) env = Right (env ++ [(name, type1)])
 
 checkBody :: [Stmt] -> Either [Error] Env
 checkBody bs = Right[("Jorge", TyInt)]
