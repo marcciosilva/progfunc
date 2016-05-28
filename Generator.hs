@@ -25,26 +25,20 @@ genProgram (Program pn dfs bdy) env
 	++ (concat [printVariable envVar | envVar <- env]) ++ "\nvoid main() { \n }"
 	-- init para sacar el ultimo ; de las sentencias
 	| otherwise = init ("#include stdio.h" 
-	++ (concat [printVariable envVar | envVar <- env]) ++ "void main() {" 
-	++ (concat [printStatement statement | statement <- bdy])) 
+	++ (concat [printVariable envVar | envVar <- env]) 
+	++ "void main() {" 
+	++ (printBody bdy ))
 	++ "\n}"
 
-printStatement :: Stmt -> String
-printStatement (Asig name exps expression) = ""
-printStatement (If expression bdy1 bdy2) = ""
-printStatement (For name exp1 exp2 bdy) = ""
-printStatement (While expression bdy) = ""
-printStatement (Write expression) = ""
-printStatement (Read name) = "\nscanf(\"%d\", &_" ++ name ++");"
-
-
+printBody :: [Stmt] -> String
+printBody stmts = concat [printStatement statement | statement <- stmts]
 
 printVariable :: (Name, Type) -> String
 printVariable (name, type1)
-	| type1 == TyInt = "\nint " ++ name ++ ";"
+	| type1 == TyInt = "\nint _" ++ name ++ ";"
 	-- los booleanos en c se expresan como int
 	-- el chequeo debe ir en la parte de body
-	| type1 == TyBool = "\nint " ++ name ++ ";"
+	| type1 == TyBool = "\nint _" ++ name ++ ";"
 	| otherwise = printArray name type1
 
 printArray :: String -> Type -> String
@@ -69,3 +63,58 @@ printSubArrayRange :: Type -> String
 printSubArrayRange (TyArray ini fin ty) = "[" ++ show (fin-ini+1) ++ "]" ++ printSubArrayRange ty
 printSubArrayRange (TyInt) = ""
 printSubArrayRange (TyBool) = ""
+
+printStatement :: Stmt -> String
+printStatement (Asig name exps expression) =
+	if (length exps > 0) 
+	then "\n_" ++ name ++ (printExpressions exps) ++  " = " ++ (printExpression expression) ++ ";"	
+	else "\n_" ++ name ++ " = " ++ (printExpression expression) ++ ";"
+printStatement (If expression bdy1 bdy2) = "\nif" ++ (printExpression expression) 
+	++ " {\n" ++ (printBody bdy1) ++ "\n}{" ++ (printBody bdy2) ++ "\n}"
+printStatement (For name exp1 exp2 bdy) = ""
+printStatement (While expression bdy) = ""
+printStatement (Write expression) = ""
+printStatement (Read name) = "\nscanf(\"%d\", &_" ++ name ++");"
+
+printExpressions :: [Expr] -> String
+printExpressions expressions = 
+	if (length expressions) == 0
+	then ""
+	-- asumiendo que solo los arreglos tienen listas de expresiones
+	else "[" ++ printExpression (head expressions) ++ "]" ++ printExpressions (tail expressions)
+
+printExpression :: Expr -> String
+printExpression (Var name expressions) = "_" ++ name ++ (printExpressions expressions)
+printExpression (IntLit int) = show int
+printExpression (BoolLit bool) = 
+	if bool
+	then "1"
+	else "0"
+printExpression (Unary uop expression) = printUnaryOperator uop ++ printExpression expression
+printExpression (Binary bop exp1 exp2) = printExpression exp1 ++ printBinaryOperator bop 
+										++ printExpression exp2
+
+printUnaryOperator :: UOp -> String
+printUnaryOperator (Not) = "!"
+printUnaryOperator (Neg) = "-"
+
+printBinaryOperator :: BOp -> String
+printBinaryOperator (Or) = " || "
+printBinaryOperator (And) = " && "
+printBinaryOperator (Equ) = " == "
+printBinaryOperator (Less) = " < "
+printBinaryOperator (Plus) = " + "
+printBinaryOperator (Minus) = " - "
+printBinaryOperator (Mult) = " * "
+printBinaryOperator (Div) = " / "
+printBinaryOperator (Mod) = " % "
+
+
+
+
+
+
+
+
+
+

@@ -92,7 +92,11 @@ checkStatements env errs stmts
 	| length errs == 0 = Right env	
 
 checkStatement :: Env -> Stmt -> Either Error Env
-checkStatement env (Asig name exps expression) = Right env
+checkStatement env (Asig name exps expression) =
+	-- if (length exps > 0) --acceso a arreglo
+	-- then
+	-- else
+	Right env
 checkStatement env (If expression bdy1 bdy2) = Right env
 checkStatement env (For name exp1 exp2 bdy) = Right env
 checkStatement env (While expression bdy) = Right env
