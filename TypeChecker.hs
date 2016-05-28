@@ -35,14 +35,14 @@ instance Show Error where
 checkProgram :: Program -> Either [Error] Env
 checkProgram (Program pn defs body)  
 	| length defs == 0 && length body == 0 = Right []
-	| length defs == 0 = case checkBody body of
+	| length defs == 0 = case checkBody [] body of
 							Right env -> Right env
 							Left err -> Left err
 	| length body == 0 = case checkVarDef defs [] [] of
 							Right env -> Right env
 							Left errVarDef -> Left errVarDef
 	| otherwise = case checkVarDef defs [] [] of
-					Right env -> case checkBody body of
+					Right env -> case checkBody env body of
 										Right env -> Right env
 										Left err -> Left err
 					-- si hay error en la declaracion no se
@@ -68,13 +68,37 @@ checkSingleVar (VarDef name type1) env
 	-- en orden de ocurrencia en el .pas
 	| otherwise = Right (env ++ [(name, type1)])
 
-
-checkBody :: [Stmt] -> Either [Error] Env
-checkBody bs = Right[("Jorge", TyInt)]
-
 containsVariable :: Env -> (Name,Type) -> Bool
 -- si se repite el identificador, la lista queda de largo > 0
 -- genero lista con variables que tienen el mismo nombre que la del parametro
 -- si el largo es mayor a cero, esta duplicada
 containsVariable vs (name,ty) = length ([(name_temp, type_temp)| (name_temp, type_temp) <- vs, 
 	name_temp == name]) > 0
+
+checkBody :: Env -> [Stmt] -> Either [Error] Env
+checkBody env stmts = case checkStatements env [] stmts of
+						Right env -> Right env
+						Left errs -> Left errs
+
+checkStatements :: Env -> [Error] -> [Stmt] -> Either [Error] Env
+checkStatements env errs stmts
+	| (length stmts) /= 0 = case checkStatement env (head stmts) of
+							Right env -> checkStatements env errs (tail stmts)
+							-- agrego error al final para mostrar los 
+							-- errores en orden de ocurrencia
+							Left err -> checkStatements env (errs ++ [err]) (tail stmts)
+	| length errs /= 0 = Left errs			
+	-- se agregaron todas las vars a env sin errores				
+	| length errs == 0 = Right env	
+
+checkStatement :: Env -> Stmt -> Either Error Env
+checkStatement env (Asig name exps expression) = Right env
+checkStatement env (If expression bdy1 bdy2) = Right env
+checkStatement env (For name exp1 exp2 bdy) = Right env
+checkStatement env (While expression bdy) = Right env
+checkStatement env (Write expression) = Right env
+checkStatement env (Read name) = 
+	-- si la variable esta indefinida a la hora de usarla
+	if length([name_temp | (name_temp, type_temp) <- env, name_temp == name]) == 0
+	then Left (Undefined name)
+	else Right env
