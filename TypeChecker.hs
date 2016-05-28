@@ -80,6 +80,9 @@ checkBody env stmts = case checkStatements env [] stmts of
 						Right env -> Right env
 						Left errs -> Left errs
 
+
+
+
 checkStatements :: Env -> [Error] -> [Stmt] -> Either [Error] Env
 checkStatements env errs stmts
 	| (length stmts) /= 0 = case checkStatement env (head stmts) of
@@ -91,18 +94,75 @@ checkStatements env errs stmts
 	-- se agregaron todas las vars a env sin errores				
 	| length errs == 0 = Right env	
 
+
+
+
+
 checkStatement :: Env -> Stmt -> Either Error Env
 checkStatement env (Asig name exps expression) =
-	-- if (length exps > 0) --acceso a arreglo
-	-- then
-	-- else
-	Right env
+	if (length exps > 0)
+	then if (checkVarDefined name env)
+		then if (checkSameType name env (getExpressionType expression))
+			then Right env
+			else 
+				case (potentialType) of
+					Just (TyArray ini fin ty) -> 
+						-- obtengo el tipo recursivamente por si 
+						-- es arreglo multidimensional
+						if (getArrayType ty) == (getExpressionType expression)
+						then Right env
+						else 
+							Left (Expected (getArrayType ty) (getExpressionType expression))
+					Nothing -> Right env -- nunca pasaria en realidad
+				-- Left (Expected (getArrayType name) TyBool)
+		else Left (Undefined name)
+		-- if inArrayRange exps
+	else Right env
+	-- de alguna manera tengo que conseguir el tipo inicial
+	where potentialType = getTypeByName name env
+
 checkStatement env (If expression bdy1 bdy2) = Right env
 checkStatement env (For name exp1 exp2 bdy) = Right env
 checkStatement env (While expression bdy) = Right env
 checkStatement env (Write expression) = Right env
 checkStatement env (Read name) = 
 	-- si la variable esta indefinida a la hora de usarla
-	if length([name_temp | (name_temp, type_temp) <- env, name_temp == name]) == 0
-	then Left (Undefined name)
-	else Right env
+	if (checkVarDefined name env)
+	then Right env
+	else Left (Undefined name)
+
+
+getArrayType :: Type -> Type
+getArrayType(TyInt) = TyInt
+getArrayType(TyBool) = TyBool
+getArrayType(TyArray ini fin ty) = getArrayType ty
+
+
+
+getTypeByName :: String -> Env -> Maybe Type
+getTypeByName name env = lookup name env
+
+
+-- determina si una variable dada por su nombre y tipo esta
+-- definida en env
+checkSameType :: String -> Env -> Type -> Bool
+checkSameType name env (TyArray ini fin ty) = length([var | var <- env, (fst var) == name && (snd var) == ty]) > 0
+checkSameType name env (TyInt) = length([var | var <- env, (fst var) == name && (snd var) == TyInt]) > 0
+checkSameType name env (TyBool) = length([var | var <- env, (fst var) == name && (snd var) == TyBool]) > 0
+
+-- encuentra el tipo de una expresion
+getExpressionType :: Expr -> Type
+-- acceso a arreglo
+-- asumiendo que los indices son del mismo tipo y esta todo bien
+-- dummy indices
+getExpressionType(Var name exps) = TyArray 0 0 (getExpressionType (head exps))
+getExpressionType(IntLit int) = TyInt
+getExpressionType(BoolLit bool) = TyBool
+getExpressionType(Unary uop expr) = getExpressionType expr
+getExpressionType(Binary bop exp1 exp2) 
+	| bop == Or || bop == And || bop == Equ || bop == Less = TyBool
+	| otherwise = TyInt
+
+-- true si esta definida
+checkVarDefined :: String -> Env -> Bool
+checkVarDefined name env = length([name_temp | (name_temp, type_temp) <- env, name_temp == name]) > 0

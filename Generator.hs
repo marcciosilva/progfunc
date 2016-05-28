@@ -20,11 +20,11 @@ import Syntax
 genProgram :: Program -> Env -> String
 genProgram (Program pn dfs bdy) env
 	-- no variables defined
-	| length env == 0 && length bdy == 0 = "#include stdio.h \n void main() { \n }"
-	| length bdy == 0 && (length dfs == length env) = "#include stdio.h" 
+	| length env == 0 && length bdy == 0 = "#include <stdio.h> \n void main() { \n }"
+	| length bdy == 0 && (length dfs == length env) = "#include <stdio.h>" 
 	++ (concat [printVariable envVar | envVar <- env]) ++ "\nvoid main() { \n }"
 	-- init para sacar el ultimo ; de las sentencias
-	| otherwise = init ("#include stdio.h" 
+	| otherwise = init ("#include <stdio.h>" 
 	++ (concat [printVariable envVar | envVar <- env]) 
 	++ "void main() {" 
 	++ (printBody bdy ))
@@ -78,7 +78,7 @@ printStatement (Read name) = "\nscanf(\"%d\", &_" ++ name ++");"
 
 printExpressions :: [Expr] -> String
 printExpressions expressions = 
-	if (length expressions) == 0
+	if (null expressions)
 	then ""
 	-- asumiendo que solo los arreglos tienen listas de expresiones
 	else "[" ++ printExpression (head expressions) ++ "]" ++ printExpressions (tail expressions)
