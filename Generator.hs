@@ -20,18 +20,18 @@ import Syntax
 genProgram :: Program -> Env -> String
 genProgram (Program pn dfs bdy) env
 	-- no variables defined
-	| length env == 0 && length bdy == 0 = "#include <stdio.h> \n void main() { \n }"
+	| length env == 0 && length bdy == 0 = "#include <stdio.h>\nvoid main() {\n}"
 	| length bdy == 0 && (length dfs == length env) = "#include <stdio.h>" 
-	++ (concat [printVariable envVar | envVar <- env]) ++ "\nvoid main() { \n }"
+	++ (concat [printVariable envVar | envVar <- env]) ++ "\nvoid main() {\n}"
 	-- init para sacar el ultimo ; de las sentencias
-	| otherwise = init ("#include <stdio.h>" 
+	| otherwise = "#include <stdio.h>" 
 	++ (concat [printVariable envVar | envVar <- env]) 
-	++ "void main() {" 
-	++ (printBody bdy ))
+	++ "\nvoid main() {" 
+	++ (printBody bdy env)
 	++ "\n}"
 
-printBody :: [Stmt] -> String
-printBody stmts = concat [printStatement statement | statement <- stmts]
+printBody :: [Stmt] -> Env -> String
+printBody stmts env = concat [printStatement statement env | statement <- stmts]
 
 printVariable :: (Name, Type) -> String
 printVariable (name, type1)
@@ -64,35 +64,53 @@ printSubArrayRange (TyArray ini fin ty) = "[" ++ show (fin-ini+1) ++ "]" ++ prin
 printSubArrayRange (TyInt) = ""
 printSubArrayRange (TyBool) = ""
 
-printStatement :: Stmt -> String
-printStatement (Asig name exps expression) =
+printStatement :: Stmt -> Env -> String
+printStatement (Asig name exps expression) env =
 	if (length exps > 0) 
-	then "\n_" ++ name ++ (printExpressions exps) ++  " = " ++ (printExpression expression) ++ ";"	
-	else "\n_" ++ name ++ " = " ++ (printExpression expression) ++ ";"
-printStatement (If expression bdy1 bdy2) = "\nif" ++ (printExpression expression) 
-	++ " {\n" ++ (printBody bdy1) ++ "\n}{" ++ (printBody bdy2) ++ "\n}"
-printStatement (For name exp1 exp2 bdy) = ""
-printStatement (While expression bdy) = ""
-printStatement (Write expression) = ""
-printStatement (Read name) = "\nscanf(\"%d\", &_" ++ name ++");"
+	then "\n_" ++ name ++ (printExpressions exps (getArrayIndices name env) env) ++  " = " ++ (printExpression expression env) ++ ";"	
+	else "\n_" ++ name ++ " = " ++ (printExpression expression env) ++ ";"
+printStatement (If expression bdy1 bdy2) env = "\nif (" ++ (printExpression expression env) 
+	++ "){" ++ (printBody bdy1 env) ++ "\n}else{" ++ (printBody bdy2 env) ++ "\n}"
+printStatement (For name exp1 exp2 bdy) env = "\nbla;"
+printStatement (While expression bdy) env = "\nbla;"
+printStatement (Write expression) env = "\nbla;"
+printStatement (Read name) env = "\nscanf (\"%d\", &_" ++ name ++");"
 
-printExpressions :: [Expr] -> String
-printExpressions expressions = 
+----------------------------------------------------------------------------------------------
+-- devuelve el offset que hay que agregarle a los indices de los arreglos
+getArrayIndices :: String -> Env -> [Integer]
+getArrayIndices varName env =
+	case (getTypeByName varName env) of
+		Just (TyArray ini fin ty) -> ini : getbla ty--(getArrayIndices varName env)
+		Nothing -> []
+
+getbla :: Type -> [Integer]
+getbla (TyArray ini fin ty) = ini : (getbla ty)
+getbla (TyInt) = []
+getbla (TyBool) = []
+
+-- devuelve tipo de una variable dado el nombre
+getTypeByName :: String -> Env -> Maybe Type
+getTypeByName name env = lookup name env
+----------------------------------------------------------------------------------------------
+
+printExpressions :: [Expr] -> [Integer] -> Env -> String
+printExpressions expressions offsets env = 
 	if (null expressions)
 	then ""
 	-- asumiendo que solo los arreglos tienen listas de expresiones
-	else "[" ++ printExpression (head expressions) ++ "]" ++ printExpressions (tail expressions)
+	else "[" ++ printExpression (head expressions) env ++ " - " ++ (show (head offsets)) ++ "]" 
+			++ printExpressions (tail expressions) (tail offsets) env
 
-printExpression :: Expr -> String
-printExpression (Var name expressions) = "_" ++ name ++ (printExpressions expressions)
-printExpression (IntLit int) = show int
-printExpression (BoolLit bool) = 
+printExpression :: Expr -> Env -> String
+printExpression (Var name expressions) env = "_" ++ name ++ (printExpressions expressions (getArrayIndices name env) env)
+printExpression (IntLit int) env = show int
+printExpression (BoolLit bool) env = 
 	if bool
 	then "1"
 	else "0"
-printExpression (Unary uop expression) = printUnaryOperator uop ++ printExpression expression
-printExpression (Binary bop exp1 exp2) = printExpression exp1 ++ printBinaryOperator bop 
-										++ printExpression exp2
+printExpression (Unary uop expression) env = printUnaryOperator uop ++ printExpression expression env
+printExpression (Binary bop exp1 exp2) env = printExpression exp1 env ++ printBinaryOperator bop ++ printExpression exp2 env
 
 printUnaryOperator :: UOp -> String
 printUnaryOperator (Not) = "!"
@@ -108,13 +126,3 @@ printBinaryOperator (Minus) = " - "
 printBinaryOperator (Mult) = " * "
 printBinaryOperator (Div) = " / "
 printBinaryOperator (Mod) = " % "
-
-
-
-
-
-
-
-
-
-
