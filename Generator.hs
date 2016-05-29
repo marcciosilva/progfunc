@@ -70,10 +70,12 @@ printStatement (Asig name exps expression) env =
 	then "\n_" ++ name ++ (printExpressions exps (getArrayIndices name env) env) ++  " = " ++ (printExpression expression env) ++ ";"	
 	else "\n_" ++ name ++ " = " ++ (printExpression expression env) ++ ";"
 printStatement (If expression bdy1 bdy2) env = "\nif (" ++ (printExpression expression env) 
-	++ "){" ++ (printBody bdy1 env) ++ "\n}else{" ++ (printBody bdy2 env) ++ "\n}"
-printStatement (For name exp1 exp2 bdy) env = "\nbla;"
-printStatement (While expression bdy) env = "\nbla;"
-printStatement (Write expression) env = "\nbla;"
+	++ "){" ++ (printBody bdy1 env) ++ "\n}else{" ++ (printBody bdy2 env) ++ "\n};"
+printStatement (For name exp1 exp2 bdy) env = "\nfor (" ++ "_" ++ name ++ "=" ++ printExpression exp1 env ++ ";_" ++ name ++ " <= " ++ printExpression exp2 env
+											++ ";" ++ "_" ++ name ++ "++ ){"
+											++ printBody bdy env ++ "\n};"
+printStatement (While expression bdy) env = "\nwhile;"
+printStatement (Write expression) env = "\nprintf (\"%d\\n\"," ++ printExpression expression env ++");"
 printStatement (Read name) env = "\nscanf (\"%d\", &_" ++ name ++");"
 
 ----------------------------------------------------------------------------------------------
