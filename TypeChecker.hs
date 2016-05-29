@@ -68,6 +68,7 @@ checkSingleVar (VarDef name type1) env
 	-- en orden de ocurrencia en el .pas
 	| otherwise = Right (env ++ [(name, type1)])
 
+-- chequea si la variable ya esta definida en env
 containsVariable :: Env -> (Name,Type) -> Bool
 -- si se repite el identificador, la lista queda de largo > 0
 -- genero lista con variables que tienen el mismo nombre que la del parametro
@@ -100,26 +101,51 @@ checkStatements env errs stmts
 
 checkStatement :: Env -> Stmt -> Either Error Env
 checkStatement env (Asig name exps expression) =
-	if (length exps > 0)
-	then if (checkVarDefined name env)
-		then if (checkSameType name env (getExpressionType expression))
-			then Right env
-			else 
-				case (potentialType) of
-					Just (TyArray ini fin ty) -> 
-						-- obtengo el tipo recursivamente por si 
-						-- es arreglo multidimensional
-						if (getArrayType ty) == (getExpressionType expression)
-						then Right env
+	if (length exps > 0) -- posiblemente asignando un arreglo
+	then 
+		-- si todos los indices del acceso al arreglo son enteros
+		if (checkIntegerArrayIndices exps env == TyInt)
+		then
+			-- trato de comparar el valor de asignacion con lo que contiene el array
+			case (getTypeByName name env) of
+			-- si efectivamente es un array
+			Just (TyArray ini fin ty) ->
+				-- obtengo ultimo tipo, por si llega a ser multidimensional el arreglo
+				case (getExpressionType expression env) of
+					-- si la expresion tiene un tipo asignado
+					Right expType ->
+						if (expType /= TyInt && expType /= TyBool)
+						-- asignacion de un arreglo
+						then Left (ArrayAssignment expType)
 						else 
-							Left (Expected (getArrayType ty) (getExpressionType expression))
-					Nothing -> Right env -- nunca pasaria en realidad
-				-- Left (Expected (getArrayType name) TyBool)
-		else Left (Undefined name)
-		-- if inArrayRange exps
-	else Right env
-	-- de alguna manera tengo que conseguir el tipo inicial
-	where potentialType = getTypeByName name env
+							-- chequeo si el tipo de variables que guarda el array
+							-- se corresponde con el tipo de la expresion
+							if ((getArrayType ty) == expType)
+							then Right env
+							else Left (Expected (getArrayType ty) expType)
+					-- si la expresion esta indefinida por ejemplo
+					Left err -> Left err
+			Just (TyInt) -> Left (NotArray TyInt) -- no era un array lo de la izquierda
+			Just (TyBool) -> Left (NotArray TyBool) -- no era un array lo de la izquierda
+			Nothing -> Left (Undefined name) -- no pasa, dado que length exps > 0; es un array
+		-- tiro el tipo de indices usados
+		else Left (Expected TyInt (checkIntegerArrayIndices exps env))
+	-- si es una unica variable
+	else
+		case (getExpressionType expression env) of
+			Right expType ->
+				if (expType /= TyInt && expType /= TyBool)
+				-- asignacion de un arreglo
+				then Left (ArrayAssignment expType)
+				else
+					case (getTypeByName name env) of
+						Just ty ->
+							if (ty == expType)
+							then Right env
+							else Left (Expected ty expType)					
+						Nothing -> Left (Undefined name)
+			Left err -> Left err
+
 
 checkStatement env (If expression bdy1 bdy2) = Right env
 checkStatement env (For name exp1 exp2 bdy) = Right env
@@ -150,18 +176,41 @@ checkSameType name env (TyArray ini fin ty) = length([var | var <- env, (fst var
 checkSameType name env (TyInt) = length([var | var <- env, (fst var) == name && (snd var) == TyInt]) > 0
 checkSameType name env (TyBool) = length([var | var <- env, (fst var) == name && (snd var) == TyBool]) > 0
 
+
+checkIntegerArrayIndices :: [Expr] -> Env -> Type
+checkIntegerArrayIndices exps env =
+	case (getExpressionType (head exps) env) of
+		Right ty ->
+			if (length (tail exps) > 0)
+			then
+				if (ty == TyInt)
+				-- si el actual es entero, sigo con el resto
+				then checkIntegerArrayIndices (tail exps) env
+				else ty
+			else ty -- si los indices son enteros devuelvo true
+		Left err -> TyInt -- no sucede
+
 -- encuentra el tipo de una expresion
-getExpressionType :: Expr -> Type
+getExpressionType :: Expr -> Env -> Either Error Type
 -- acceso a arreglo
 -- asumiendo que los indices son del mismo tipo y esta todo bien
 -- dummy indices
-getExpressionType(Var name exps) = TyArray 0 0 (getExpressionType (head exps))
-getExpressionType(IntLit int) = TyInt
-getExpressionType(BoolLit bool) = TyBool
-getExpressionType(Unary uop expr) = getExpressionType expr
-getExpressionType(Binary bop exp1 exp2) 
-	| bop == Or || bop == And || bop == Equ || bop == Less = TyBool
-	| otherwise = TyInt
+getExpressionType (Var name exps) env
+	-- si es arreglo multidimensional, obtiene el tipo recursivamente
+	| length exps /= 0 = getExpressionType (head exps) env--TyArray 0 0 (getExpressionType (head exps))
+	-- si es simplemente un nombre, lo devuelve
+	| otherwise        = case (getTypeByName name env) of
+							Just ty -> Right ty
+							Nothing -> Left (Undefined name)
+	-- case (getTypeByName name env) of
+	-- 	Just ty -> Right ty
+	-- 	Nothing -> Left (Undefined name)							
+getExpressionType (IntLit int) env = Right TyInt
+getExpressionType (BoolLit bool) env = Right TyBool
+getExpressionType (Unary uop expr) env = getExpressionType expr env
+getExpressionType (Binary bop exp1 exp2) env
+	| bop == Or || bop == And || bop == Equ || bop == Less = Right TyBool
+	| otherwise = Right TyInt
 
 -- true si esta definida
 checkVarDefined :: String -> Env -> Bool
