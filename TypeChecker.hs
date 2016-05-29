@@ -90,7 +90,7 @@ checkStatements env errs stmts
 							Right env -> checkStatements env errs (tail stmts)
 							-- agrego error al final para mostrar los 
 							-- errores en orden de ocurrencia
-							Left err -> checkStatements env (errs ++ [err]) (tail stmts)
+							Left errLst -> checkStatements env (errs ++ errLst) (tail stmts)
 	| length errs /= 0 = Left errs			
 	-- se agregaron todas las vars a env sin errores				
 	| length errs == 0 = Right env	
@@ -99,7 +99,8 @@ checkStatements env errs stmts
 
 
 
-checkStatement :: Env -> Stmt -> Either Error Env
+checkStatement :: Env -> Stmt -> Either [Error] Env
+------------------ ASIGNACION DE VARIABLES ------------------
 checkStatement env (Asig name exps expression) =
 	if (length exps > 0) -- posiblemente asignando un arreglo
 	then 
@@ -116,58 +117,93 @@ checkStatement env (Asig name exps expression) =
 					Right expType ->
 						if (expType /= TyInt && expType /= TyBool)
 						-- asignacion de un arreglo
-						then Left (ArrayAssignment expType)
+						then Left [(ArrayAssignment expType)]
 						else 
 							-- chequeo si el tipo de variables que guarda el array
 							-- se corresponde con el tipo de la expresion
 							if ((getArrayType ty) == expType)
 							then Right env
-							else Left (Expected (getArrayType ty) expType)
+							else Left [(Expected (getArrayType ty) expType)]
 					-- si la expresion esta indefinida por ejemplo
-					Left err -> Left err
-			Just (TyInt) -> Left (NotArray TyInt) -- no era un array lo de la izquierda
-			Just (TyBool) -> Left (NotArray TyBool) -- no era un array lo de la izquierda
-			Nothing -> Left (Undefined name) -- no pasa, dado que length exps > 0; es un array
+					Left err -> Left [err]
+			Just (TyInt) -> Left [(NotArray TyInt)] -- no era un array lo de la izquierda
+			Just (TyBool) -> Left [(NotArray TyBool)] -- no era un array lo de la izquierda
+			Nothing -> Left [(Undefined name)] -- no pasa, dado que length exps > 0; es un array
 		-- tiro el tipo de indices usados
-		else Left (Expected TyInt (checkIntegerArrayIndices exps env))
+		else Left [(Expected TyInt (checkIntegerArrayIndices exps env))]
 	-- si es una unica variable
 	else
 		case (getExpressionType expression env) of
 			Right expType ->
 				if (expType /= TyInt && expType /= TyBool)
 				-- asignacion de un arreglo
-				then Left (ArrayAssignment expType)
+				then Left [(ArrayAssignment expType)]
 				else
 					case (getTypeByName name env) of
 						Just ty ->
 							if (ty == expType)
 							then Right env
-							else Left (Expected ty expType)					
-						Nothing -> Left (Undefined name)
-			Left err -> Left err
-
-
-checkStatement env (If expression bdy1 bdy2) = Right env
+							else Left [(Expected ty expType)]
+						Nothing -> Left [(Undefined name)]
+			Left err -> Left [err]
+------------------ ASIGNACION DE VARIABLES ------------------
+------------------ IF ------------------
+checkStatement env (If expression bdy1 bdy2) = 
+	case (getExpressionType expression env) of
+		Right expType ->
+			-- si no es una condicion booleana
+			if (expType /= TyBool)
+			then Left [(Expected TyBool expType)]
+			else
+				-- chequeo del cuerpo del if
+				case checkBody env bdy1 of
+					Right env ->
+						-- chequeo del cuerpo del else
+						case checkBody env bdy2 of
+							Right env -> Right env
+							-- ya viene una lista de errores
+							Left errs -> Left errs
+					Left errs -> Left errs
+		Left err -> Left [err]
+------------------ IF ------------------
+------------------ FOR ------------------
 checkStatement env (For name exp1 exp2 bdy) = Right env
+------------------ FOR ------------------
+------------------ WHILE ------------------
 checkStatement env (While expression bdy) = Right env
-checkStatement env (Write expression) = Right env
+------------------ WHILE ------------------
+------------------ WRITE ------------------
+checkStatement env (Write expression) = 
+	case (getExpressionType expression env) of
+		Right expType ->
+			if (expType /= TyInt)
+			-- lo que se le pasa al writeln no es de tipo entero
+			then Left [(Expected TyInt expType)]
+			else Right env
+		Left err -> Left [err]
+------------------ WRITE ------------------
+------------------ READ ------------------
 checkStatement env (Read name) = 
 	-- si la variable esta indefinida a la hora de usarla
-	if (checkVarDefined name env)
-	then Right env
-	else Left (Undefined name)
-
+	-- if (checkVarDefined name env)
+	-- then Right env
+	-- else Left (Undefined name)
+	case (getTypeByName name env) of
+		Just ty -> 
+			if (ty /= TyInt)
+			-- lo que se le pasa al writeln no es de tipo entero
+			then Left [(Expected TyInt ty)]
+			else Right env
+		Nothing -> Left [(Undefined name)]
+------------------ READ ------------------
 
 getArrayType :: Type -> Type
 getArrayType(TyInt) = TyInt
 getArrayType(TyBool) = TyBool
 getArrayType(TyArray ini fin ty) = getArrayType ty
 
-
-
 getTypeByName :: String -> Env -> Maybe Type
 getTypeByName name env = lookup name env
-
 
 -- determina si una variable dada por su nombre y tipo esta
 -- definida en env
@@ -194,17 +230,13 @@ checkIntegerArrayIndices exps env =
 getExpressionType :: Expr -> Env -> Either Error Type
 -- acceso a arreglo
 -- asumiendo que los indices son del mismo tipo y esta todo bien
--- dummy indices
 getExpressionType (Var name exps) env
 	-- si es arreglo multidimensional, obtiene el tipo recursivamente
-	| length exps /= 0 = getExpressionType (head exps) env--TyArray 0 0 (getExpressionType (head exps))
+	| length exps /= 0 = getExpressionType (head exps) env
 	-- si es simplemente un nombre, lo devuelve
 	| otherwise        = case (getTypeByName name env) of
 							Just ty -> Right ty
 							Nothing -> Left (Undefined name)
-	-- case (getTypeByName name env) of
-	-- 	Just ty -> Right ty
-	-- 	Nothing -> Left (Undefined name)							
 getExpressionType (IntLit int) env = Right TyInt
 getExpressionType (BoolLit bool) env = Right TyBool
 getExpressionType (Unary uop expr) env = getExpressionType expr env
