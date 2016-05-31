@@ -306,7 +306,10 @@ checkStatement env (Asig name exps expression) =
 							then Right env
 							else Left [(Expected ty expType)]
 						Nothing -> Left [(Undefined name)]
-			Left errs -> Left errs
+			Left errs ->
+					case (getTypeByName name env) of
+						Just ty -> Left errs
+						Nothing -> Left ([(Undefined name)] ++ errs)
 ------------------ ASIGNACION DE VARIABLES ------------------
 ------------------ IF ------------------
 checkStatement env (If expression bdy1 bdy2) = 
