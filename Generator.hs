@@ -21,30 +21,30 @@ genProgram :: Program -> Env -> String
 genProgram (Program pn dfs bdy) env
 	-- no variables defined
 	| length env == 0 && length bdy == 0 = "#include <stdio.h>\nvoid main() {\n}"
-	| length bdy == 0 && (length dfs == length env) = "#include <stdio.h>" 
+	| length bdy == 0 && (length dfs == length env) = "#include <stdio.h>\n" 
 	++ (concat [printVariable envVar | envVar <- env]) ++ "\nvoid main() {\n}"
 	-- init para sacar el ultimo ; de las sentencias
-	| otherwise = "#include <stdio.h>" 
+	| otherwise = "#include <stdio.h>\n" 
 	++ (concat [printVariable envVar | envVar <- env]) 
-	++ "\nvoid main() {" 
+	++ "void main() {\n" 
 	++ (printBody bdy env)
-	++ "\n}"
+	++ "}"
 
 printBody :: [Stmt] -> Env -> String
 printBody stmts env = concat [printStatement statement env | statement <- stmts]
 
 printVariable :: (Name, Type) -> String
 printVariable (name, type1)
-	| type1 == TyInt = "\nint _" ++ name ++ ";"
+	| type1 == TyInt = "int _" ++ name ++ ";\n"
 	-- los booleanos en c se expresan como int
 	-- el chequeo debe ir en la parte de body
-	| type1 == TyBool = "\nint _" ++ name ++ ";"
+	| type1 == TyBool = "int _" ++ name ++ ";\n"
 	| otherwise = printArray name type1
 
 printArray :: String -> Type -> String
 printArray name (TyArray i j type1)
-	| type1 == TyInt = "\nint _" ++ name ++ "[" ++ show (j-i+1) ++ "];"
-	| type1 == TyBool = "\nint _" ++ name ++ "[" ++ show (j-i+1) ++ "];"
+	| type1 == TyInt = "int _" ++ name ++ "[" ++ show (j-i+1) ++ "];\n"
+	| type1 == TyBool = "int _" ++ name ++ "[" ++ show (j-i+1) ++ "];\n"
 	-- si es un array de arrays, primero imprimo el tipo, el nombre y el primer rango
 	-- y despues imprimo recursivamente los subrangos que vienen
 	| otherwise =  printArrayType type1 ++ " _" ++ name ++ "[" ++ show (j-i+1) ++ "]"
@@ -54,8 +54,8 @@ printArray name (TyArray i j type1)
 -- funcion para obtener el tipo del array de arrays
 printArrayType :: Type -> String
 printArrayType (TyArray ini fin ty)
-	| ty == TyInt = "\nint"
-	| ty == TyBool = "\nint"
+	| ty == TyInt = "int"
+	| ty == TyBool = "int"
 	| otherwise = printArrayType ty
 
 -- imprime el subrango actual y el subrango siguiente recursivamente
@@ -67,16 +67,16 @@ printSubArrayRange (TyBool) = ""
 printStatement :: Stmt -> Env -> String
 printStatement (Asig name exps expression) env =
 	if (length exps > 0) 
-	then "\n_" ++ name ++ (printExpressions exps (getArrayIndices name env) env) ++  " = " ++ (printExpression expression env) ++ ";"	
-	else "\n_" ++ name ++ " = " ++ (printExpression expression env) ++ ";"
-printStatement (If expression bdy1 bdy2) env = "\nif (" ++ (printExpression expression env) 
-	++ "){" ++ (printBody bdy1 env) ++ "\n}else{" ++ (printBody bdy2 env) ++ "\n};"
-printStatement (For name exp1 exp2 bdy) env = "\nfor (" ++ "_" ++ name ++ "=" ++ printExpression exp1 env ++ ";_" ++ name ++ " <= " ++ printExpression exp2 env
-											++ ";" ++ "_" ++ name ++ "++ ){"
-											++ printBody bdy env ++ "\n};"
-printStatement (While expression bdy) env = "\nwhile;"
-printStatement (Write expression) env = "\nprintf (\"%d\\n\"," ++ printExpression expression env ++");"
-printStatement (Read name) env = "\nscanf (\"%d\", &_" ++ name ++");"
+	then "_" ++ name ++ (printExpressions exps (getArrayIndices name env) env) ++  " = " ++ (printExpression expression env) ++ ";\n"	
+	else "_" ++ name ++ " = " ++ (printExpression expression env) ++ ";\n"
+printStatement (If expression bdy1 bdy2) env = "if (" ++ (printExpression expression env) 
+	++ "){\n" ++ (printBody bdy1 env) ++ "}else{\n" ++ (printBody bdy2 env) ++ "};\n"
+printStatement (For name exp1 exp2 bdy) env = "for (" ++ "_" ++ name ++ "=" ++ printExpression exp1 env ++ ";_" ++ name ++ " <= " ++ printExpression exp2 env
+											++ ";" ++ "_" ++ name ++ "++ ){\n"
+											++ printBody bdy env ++ "};\n"
+printStatement (While expression bdy) env = "while;\n"
+printStatement (Write expression) env = "printf (\"%d\\n\"," ++ printExpression expression env ++");\n"
+printStatement (Read name) env = "scanf (\"%d\", &_" ++ name ++");\n"
 
 ----------------------------------------------------------------------------------------------
 -- devuelve el offset que hay que agregarle a los indices de los arreglos

@@ -96,7 +96,168 @@ checkStatements env errs stmts
 	| length errs == 0 = Right env	
 
 
-
+-- recibe una lista vacia de errores
+checkForStatement :: Env -> [Error] -> Expr -> Expr -> Body -> Either [Error] Env
+checkForStatement env errs exp1 exp2 bdy =
+	-- chequeo si variable de iteracion default esta definida
+	if ((checkVarDefined "i" env) == False)
+	then
+		-- le paso una lista vacia para errores, porque errs igual la concateno despues
+		case (getExpressionType [] exp1 env) of
+			Right exp1Type ->
+				if (exp1Type /= TyInt)
+				then
+					-- aca al menos exp1 salió mal, hay que ver que pasa con exp2 y bdy
+					case (getExpressionType [] exp2 env) of
+						Right exp2Type ->
+							if (exp2Type /= TyInt)
+							then 
+								-- aca falla por lo menos la exp2, y el bdy puede fallar o no
+								case checkBody env bdy of
+									Right env -> Left (errs ++ [(Undefined "i")] ++ [(Expected TyInt exp1Type)] ++ [(Expected TyInt exp2Type)])
+									-- todo tiene errores
+									Left errLst -> Left (errs ++ [(Undefined "i")] ++ [(Expected TyInt exp1Type)] ++ [(Expected TyInt exp2Type)] ++ errLst)
+							else 
+								-- falla exp1, no falla exp2, hay que ver el bdy
+								case checkBody env bdy of
+									Right env -> Left (errs ++ [(Undefined "i")] ++ [(Expected TyInt exp1Type)])
+									-- fallan exp1 mas el bdy
+									Left errLst -> Left (errs ++ [(Undefined "i")] ++ [(Expected TyInt exp1Type)] ++ errLst)
+						-- si alguna variable no esta definida en exp2
+						Left errs1 ->
+							-- ya se sabe que falló exp2, y que el exptype de exp1 no matchea
+							case checkBody env bdy of
+								-- el body esta bien pero lo demas tiene errores
+								Right env -> Left (errs ++ [(Undefined "i")] ++ [(Expected TyInt exp1Type)] ++ errs1)
+								-- todo tiene errores
+								Left errLst -> Left (errs ++ [(Undefined "i")] ++ [(Expected TyInt exp1Type)] ++ errs1 ++ errLst)
+				else
+					-- aca al menos exp 1 salio bien
+					case (getExpressionType [] exp2 env) of
+						Right exp2Type ->
+							if (exp2Type /= TyInt)
+							then 
+								-- aca falla por lo menos la exp2, y el bdy puede fallar o no
+								case checkBody env bdy of
+									Right env -> Left (errs ++ [(Undefined "i")] ++ [(Expected TyInt exp2Type)])
+									-- ya viene una lista de errores
+									Left errLst -> Left (errs ++ [(Undefined "i")] ++ [(Expected TyInt exp2Type)] ++ errLst)
+							else 
+								-- en esta bifurcacion sale todo bien, o solo falla el body
+								case checkBody env bdy of
+									-- sale todo bien pero como falla la definicion de i, marchamos
+									Right env -> Left (errs ++ [(Undefined "i")])
+									-- ya viene una lista de errores
+									Left errLst -> Left (errs ++ [(Undefined "i")] ++ errLst)
+						Left errs1 ->
+							-- exp2 esta mal, y exp 1 bien
+							case checkBody env bdy of
+								Right env -> Left (errs ++ [(Undefined "i")] ++ errs1)
+								-- ya viene una lista de errores
+								Left errLst -> Left (errs ++ [(Undefined "i")] ++ errs1 ++ errLst)
+			Left errs1 -> --exp1 salio mal de unaLeft errs ++ [err]	
+				-- aca al menos exp1 salió mal, hay que ver que pasa con exp2 y bdy
+				case (getExpressionType [] exp2 env) of
+					Right exp2Type ->
+						if (exp2Type /= TyInt)
+						then 
+							-- aca falla por lo menos la exp2, y el bdy puede fallar o no
+							case checkBody env bdy of
+								Right env -> Left (errs ++ [(Undefined "i")] ++ errs1 ++ [(Expected TyInt exp2Type)])
+								-- todo tiene errores
+								Left errLst -> Left (errs ++ [(Undefined "i")] ++ errs1 ++ [(Expected TyInt exp2Type)] ++ errLst)
+						else 
+							-- falla exp1, no falla exp2, hay que ver el bdy
+							case checkBody env bdy of
+								Right env -> Left (errs ++ [(Undefined "i")] ++ errs1)
+								-- fallan exp1 mas el bdy
+								Left errLst -> Left (errs ++ [(Undefined "i")] ++ errs1 ++ errLst)
+					-- si alguna variable no esta definida en exp2
+					Left errs2 ->
+						-- ya se sabe que falló exp2, y que el exptype de exp1 no matchea
+						case checkBody env bdy of
+							-- el body esta bien pero lo demas tiene errores
+							Right env -> Left (errs ++ [(Undefined "i")] ++ errs1 ++ errs2)
+							-- todo tiene errores
+							Left errLst -> Left (errs ++ [(Undefined "i")] ++ errs1 ++ errs2 ++ errLst)
+	else
+		case (getExpressionType [] exp1 env) of
+			Right exp1Type ->
+				if (exp1Type /= TyInt)
+				then
+					-- aca al menos exp1 salió mal, hay que ver que pasa con exp2 y bdy
+					case (getExpressionType [] exp2 env) of
+						Right exp2Type ->
+							if (exp2Type /= TyInt)
+							then 
+								-- aca falla por lo menos la exp2, y el bdy puede fallar o no
+								case checkBody env bdy of
+									Right env -> Left (errs ++ [(Expected TyInt exp1Type)] ++ [(Expected TyInt exp2Type)])
+									-- todo tiene errores
+									Left errLst -> Left (errs ++ [(Expected TyInt exp1Type)] ++ [(Expected TyInt exp2Type)] ++ errLst)
+							else 
+								-- falla exp1, no falla exp2, hay que ver el bdy
+								case checkBody env bdy of
+									Right env -> Left (errs ++ [(Expected TyInt exp1Type)])
+									-- fallan exp1 mas el bdy
+									Left errLst -> Left (errs ++ [(Expected TyInt exp1Type)] ++ errLst)
+						-- si alguna variable no esta definida en exp2
+						Left errs1 ->
+							-- ya se sabe que falló exp2, y que el exptype de exp1 no matchea
+							case checkBody env bdy of
+								-- el body esta bien pero lo demas tiene errores
+								Right env -> Left (errs ++ [(Expected TyInt exp1Type)] ++ errs1)
+								-- todo tiene errores
+								Left errLst -> Left (errs ++ [(Expected TyInt exp1Type)] ++ errs1 ++ errLst)
+				else
+					-- aca al menos exp 1 salio bien
+					case (getExpressionType [] exp2 env) of
+						Right exp2Type ->
+							if (exp2Type /= TyInt)
+							then 
+								-- aca falla por lo menos la exp2, y el bdy puede fallar o no
+								case checkBody env bdy of
+									Right env -> Left (errs ++ [(Expected TyInt exp2Type)])
+									-- ya viene una lista de errores
+									Left errLst -> Left (errs ++ [(Expected TyInt exp2Type)] ++ errLst)
+							else 
+								-- en esta bifurcacion sale todo bien, o solo falla el body
+								case checkBody env bdy of
+									-- sale todo bien
+									Right env -> Right env
+									-- ya viene una lista de errores
+									Left errLst -> Left (errs ++ errLst)
+						Left errs1 ->
+							-- exp2 esta mal, y exp 1 bien
+							case checkBody env bdy of
+								Right env -> Left (errs ++ errs1)
+								-- ya viene una lista de errores
+								Left errLst -> Left (errs ++ errs1 ++ errLst)
+			Left errs1 -> --exp1 salio mal de unaLeft errs ++ errs1	
+				-- aca al menos exp1 salió mal, hay que ver que pasa con exp2 y bdy
+				case (getExpressionType [] exp2 env) of
+					Right exp2Type ->
+						if (exp2Type /= TyInt)
+						then 
+							-- aca falla por lo menos la exp2, y el bdy puede fallar o no
+							case checkBody env bdy of
+								Right env -> Left (errs ++ errs1 ++ [(Expected TyInt exp2Type)])
+								-- todo tiene errores
+								Left errLst -> Left (errs ++ errs1 ++ [(Expected TyInt exp2Type)] ++ errLst)
+						else 
+							-- falla exp1, no falla exp2, hay que ver el bdy
+							case checkBody env bdy of
+								Right env -> Left (errs ++ errs1)
+								-- fallan exp1 mas el bdy
+								Left errLst -> Left (errs ++ errs1 ++ errLst)
+					-- si alguna variable no esta definida en exp2
+					Left errs2 ->
+						-- ya se sabe que falló exp2, y que el exptype de exp1 no matchea
+						case checkBody env bdy of
+							-- el body esta bien pero lo demas tiene errores
+							Right env -> Left (errs ++ errs1 ++ errs2)
+							-- todo tiene errores
+							Left errLst -> Left (errs ++ errs1 ++ errs2 ++ errLst)
 
 
 checkStatement :: Env -> Stmt -> Either [Error] Env
@@ -112,7 +273,7 @@ checkStatement env (Asig name exps expression) =
 			-- si efectivamente es un array
 			Just (TyArray ini fin ty) ->
 				-- obtengo ultimo tipo, por si llega a ser multidimensional el arreglo
-				case (getExpressionType expression env) of
+				case (getExpressionType [] expression env) of
 					-- si la expresion tiene un tipo asignado
 					Right expType ->
 						if (expType /= TyInt && expType /= TyBool)
@@ -125,7 +286,7 @@ checkStatement env (Asig name exps expression) =
 							then Right env
 							else Left [(Expected (getArrayType ty) expType)]
 					-- si la expresion esta indefinida por ejemplo
-					Left err -> Left [err]
+					Left errs -> Left errs
 			Just (TyInt) -> Left [(NotArray TyInt)] -- no era un array lo de la izquierda
 			Just (TyBool) -> Left [(NotArray TyBool)] -- no era un array lo de la izquierda
 			Nothing -> Left [(Undefined name)] -- no pasa, dado que length exps > 0; es un array
@@ -133,7 +294,7 @@ checkStatement env (Asig name exps expression) =
 		else Left [(Expected TyInt (checkIntegerArrayIndices exps env))]
 	-- si es una unica variable
 	else
-		case (getExpressionType expression env) of
+		case (getExpressionType [] expression env) of
 			Right expType ->
 				if (expType /= TyInt && expType /= TyBool)
 				-- asignacion de un arreglo
@@ -145,11 +306,11 @@ checkStatement env (Asig name exps expression) =
 							then Right env
 							else Left [(Expected ty expType)]
 						Nothing -> Left [(Undefined name)]
-			Left err -> Left [err]
+			Left errs -> Left errs
 ------------------ ASIGNACION DE VARIABLES ------------------
 ------------------ IF ------------------
 checkStatement env (If expression bdy1 bdy2) = 
-	case (getExpressionType expression env) of
+	case (getExpressionType [] expression env) of
 		Right expType ->
 			-- si no es una condicion booleana
 			if (expType /= TyBool)
@@ -164,30 +325,27 @@ checkStatement env (If expression bdy1 bdy2) =
 							-- ya viene una lista de errores
 							Left errs -> Left errs
 					Left errs -> Left errs
-		Left err -> Left [err]
+		Left errs -> Left errs
 ------------------ IF ------------------
 ------------------ FOR ------------------
-checkStatement env (For name exp1 exp2 bdy) = Right env
+checkStatement env (For name exp1 exp2 bdy) = checkForStatement env [] exp1 exp2 bdy
 ------------------ FOR ------------------
 ------------------ WHILE ------------------
 checkStatement env (While expression bdy) = Right env
 ------------------ WHILE ------------------
 ------------------ WRITE ------------------
 checkStatement env (Write expression) = 
-	case (getExpressionType expression env) of
+	case (getExpressionType [] expression env) of
 		Right expType ->
 			if (expType /= TyInt)
 			-- lo que se le pasa al writeln no es de tipo entero
 			then Left [(Expected TyInt expType)]
 			else Right env
-		Left err -> Left [err]
+		Left errs -> Left errs
 ------------------ WRITE ------------------
 ------------------ READ ------------------
 checkStatement env (Read name) = 
 	-- si la variable esta indefinida a la hora de usarla
-	-- if (checkVarDefined name env)
-	-- then Right env
-	-- else Left (Undefined name)
 	case (getTypeByName name env) of
 		Just ty -> 
 			if (ty /= TyInt)
@@ -215,7 +373,7 @@ checkSameType name env (TyBool) = length([var | var <- env, (fst var) == name &&
 
 checkIntegerArrayIndices :: [Expr] -> Env -> Type
 checkIntegerArrayIndices exps env =
-	case (getExpressionType (head exps) env) of
+	case (getExpressionType [] (head exps) env) of
 		Right ty ->
 			if (length (tail exps) > 0)
 			then
@@ -224,25 +382,67 @@ checkIntegerArrayIndices exps env =
 				then checkIntegerArrayIndices (tail exps) env
 				else ty
 			else ty -- si los indices son enteros devuelvo true
-		Left err -> TyInt -- no sucede
+		Left errs -> TyInt -- NO OCURRE, FUCK YOU
 
 -- encuentra el tipo de una expresion
-getExpressionType :: Expr -> Env -> Either Error Type
+getExpressionType :: [Error] -> Expr -> Env -> Either [Error] Type
 -- acceso a arreglo
 -- asumiendo que los indices son del mismo tipo y esta todo bien
-getExpressionType (Var name exps) env
+getExpressionType errs (Var name exps) env
 	-- si es arreglo multidimensional, obtiene el tipo recursivamente
-	| length exps /= 0 = getExpressionType (head exps) env
-	-- si es simplemente un nombre, lo devuelve
+	-- no se chequea que la variable este definida por su nombre
+	| length exps /= 0 = 
+		case (getTypeByName name env) of
+			Just ty ->
+				case (getExpressionType [] (head exps) env) of
+					Right ty1 -> 
+						if (ty == ty1)
+						then Right ty1
+						else Left (errs ++ [(Expected ty ty1)])
+					Left errLst -> Left (errs ++ errLst)			
+			Nothing ->
+				-- solo analiza la primera de la lista de expresiones por ahora
+				case (getExpressionType [] (head exps) env) of
+					Right ty1 -> Left (errs ++ [(Undefined name)])
+					Left errLst -> Left (errs ++ [(Undefined name)] ++ errLst)			
+	-- si es simplemente una referencia a una variable, devuelve su tipo
 	| otherwise        = case (getTypeByName name env) of
 							Just ty -> Right ty
-							Nothing -> Left (Undefined name)
-getExpressionType (IntLit int) env = Right TyInt
-getExpressionType (BoolLit bool) env = Right TyBool
-getExpressionType (Unary uop expr) env = getExpressionType expr env
-getExpressionType (Binary bop exp1 exp2) env
+							Nothing -> Left [(Undefined name)]
+getExpressionType errs (IntLit int) env = Right TyInt
+getExpressionType errs (BoolLit bool) env = Right TyBool
+-- aca no concateno errs, tengo que pasarlo por parametro
+getExpressionType errs (Unary uop expr) env = getExpressionType errs expr env
+getExpressionType errs (Binary bop exp1 exp2) env
+	-- HAY QUE REFINAR ESTO
 	| bop == Or || bop == And || bop == Equ || bop == Less = Right TyBool
-	| otherwise = Right TyInt
+	| otherwise = -- operaciones con enteros
+		-- chequeo primera expresion de la operacion binaria
+		case (getExpressionType [] exp1 env) of
+			Right ty1 ->
+				-- chequeo segunda expresion de la operacion binaria
+				case (getExpressionType [] exp2 env) of
+					Right ty2 ->
+						if (ty1 == TyInt)
+						then
+							if (ty2 == TyInt)
+							then Right TyInt
+							else Left (errs ++ [(Expected TyInt ty2)])
+						else
+							if (ty2 == TyInt)
+							then Left (errs ++ [(Expected TyInt ty1)])
+							else Left (errs ++ [(Expected TyInt ty1), (Expected TyInt ty2)])
+					Left errs2 ->
+						if (ty1 == TyInt)
+						then Left (errs ++ errs2)
+						else Left (errs ++ [(Expected TyInt ty1)] ++ errs2)
+			Left errs1 ->
+				case (getExpressionType [] exp2 env) of
+					Right ty2 ->
+						if (ty2 == TyInt)
+						then Left (errs ++ errs1)
+						else Left (errs ++ errs1 ++ [(Expected TyInt ty2)])
+					Left errs2 -> Left (errs ++ errs1 ++ errs2)
 
 -- true si esta definida
 checkVarDefined :: String -> Env -> Bool
