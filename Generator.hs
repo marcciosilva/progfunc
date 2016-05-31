@@ -74,7 +74,8 @@ printStatement (If expression bdy1 bdy2) env = "if (" ++ (printExpression expres
 printStatement (For name exp1 exp2 bdy) env = "for (" ++ "_" ++ name ++ "=" ++ printExpression exp1 env ++ ";_" ++ name ++ " <= " ++ printExpression exp2 env
 											++ ";" ++ "_" ++ name ++ "++ ){\n"
 											++ printBody bdy env ++ "};\n"
-printStatement (While expression bdy) env = "while;\n"
+printStatement (While expression bdy) env = "while (" ++ printExpression expression env ++ "){\n"
+											++ printBody bdy env ++ "};\n"
 printStatement (Write expression) env = "printf (\"%d\\n\"," ++ printExpression expression env ++");\n"
 printStatement (Read name) env = "scanf (\"%d\", &_" ++ name ++");\n"
 

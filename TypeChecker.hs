@@ -24,8 +24,6 @@ data Error = Duplicated      Name
            | NotArray        Type
            | ArrayAssignment Type
            | Expected        Type Type
-           -- ERROR AGREGADO A MANOPLA
-           | NotComparable Type Type
 
 instance Show Error where
  show (Duplicated      n)  = "Duplicated definition: " ++ n
@@ -33,8 +31,6 @@ instance Show Error where
  show (NotArray        ty) = "Type " ++ show ty ++ " is not an array" 
  show (ArrayAssignment ty) = "Array assignment: " ++ show ty
  show (Expected    ty ty') = "Expected: " ++ show ty ++ " Actual: " ++ show ty'
- -- ERROR AGREGADO A MANOPLA
- show (NotComparable    ty ty') = "Can't compare " ++ show ty ++ " with " ++ show ty'
 
 checkProgram :: Program -> Either [Error] Env
 checkProgram (Program pn defs body)  
@@ -348,12 +344,6 @@ checkForStatement env errs exp1 exp2 bdy =
 										-- todo tiene errores
 										Left errLst -> Left (errs ++ [(Expected TyInt ty)] ++ errs1 ++ errs2 ++ errLst)
 
-
-
-
-
-
-
 checkStatement :: Env -> Stmt -> Either [Error] Env
 ------------------ ASIGNACION DE VARIABLES ------------------
 checkStatement env (Asig name exps expression) =
@@ -463,7 +453,31 @@ checkStatement env (If expression bdy1 bdy2) =
 checkStatement env (For name exp1 exp2 bdy) = checkForStatement env [] exp1 exp2 bdy
 ------------------ FOR ------------------
 ------------------ WHILE ------------------
-checkStatement env (While expression bdy) = Right env
+checkStatement env (While expression bdy) =
+	case (getExpressionType [] expression env) of
+		Right expType ->
+			-- si no es una condicion booleana
+			if (expType /= TyBool)
+			then 
+				-- la expresion es incorrecta, chequeo el resto
+				case checkBody env bdy of
+					-- solo la expresion falla
+					Right env -> Left [(Expected TyBool expType)]
+					-- ya viene una lista de errores
+					Left errsBdy -> Left ([(Expected TyBool expType)] ++ errsBdy)
+			else
+				-- la expresion es correcta, chequeo el resto
+				case checkBody env bdy of
+					-- salio todo bien
+					Right env -> Right env
+					-- ya viene una lista de errores
+					Left errsBdy -> Left errsBdy
+		Left errsExp -> 
+			-- la expresion es incorrecta, chequeo el resto
+			case checkBody env bdy of
+				Right env -> Left errsExp
+				-- ya viene una lista de errores
+				Left errsBdy -> Left (errsExp ++ errsBdy)
 ------------------ WHILE ------------------
 ------------------ WRITE ------------------
 checkStatement env (Write expression) = 
@@ -524,19 +538,19 @@ getExpressionType errs (Var name exps) env
 	-- si es arreglo multidimensional, obtiene el tipo recursivamente
 	-- no se chequea que la variable este definida por su nombre
 	| length exps /= 0 = 
-		case (getTypeByName name env) of
-			Just ty ->
-				case (getExpressionType [] (head exps) env) of
-					Right ty1 -> 
-						if (ty == ty1)
-						then Right ty1
-						else Left (errs ++ [(Expected ty ty1)])
-					Left errLst -> Left (errs ++ errLst)			
-			Nothing ->
-				-- solo analiza la primera de la lista de expresiones por ahora
-				case (getExpressionType [] (head exps) env) of
-					Right ty1 -> Left (errs ++ [(Undefined name)])
-					Left errLst -> Left (errs ++ [(Undefined name)] ++ errLst)			
+		-- si todos los indices del acceso al arreglo son enteros
+		if (checkIntegerArrayIndices exps env == TyInt)
+		then
+			-- trato de comparar el valor de asignacion con lo que contiene el array
+			case (getTypeByName name env) of
+				-- si efectivamente es un array
+				Just (TyArray ini fin ty) -> Right (getArrayType ty)
+				Just (TyInt) -> Left [(NotArray TyInt)] -- no era un array
+				Just (TyBool) -> Left [(NotArray TyBool)] -- no era un array
+				Nothing -> Left [(Undefined name)] -- puede pasar que se intente a acceder
+				-- a algo que ni existe
+		-- tiro el tipo de indices usados
+		else Left [(Expected TyInt (checkIntegerArrayIndices exps env))]
 	-- si es simplemente una referencia a una variable, devuelve su tipo
 	| otherwise        = case (getTypeByName name env) of
 							Just ty -> Right ty
@@ -579,7 +593,8 @@ getExpressionType errs (Binary bop exp1 exp2) env
 					Right ty2 ->
 						if (ty1 == ty2)
 						then Right TyBool
-						else Left (errs ++ [(NotComparable ty1 ty2)])
+						-- expresiones no comparables
+						else Left (errs ++ [(Expected ty1 ty2)])
 					Left errs2 -> Left (errs ++ errs2)
 			Left errs1 -> 
 				case (getExpressionType [] exp2 env) of
