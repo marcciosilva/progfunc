@@ -24,6 +24,8 @@ data Error = Duplicated      Name
            | NotArray        Type
            | ArrayAssignment Type
            | Expected        Type Type
+           -- ERROR AGREGADO A MANOPLA
+           | NotComparable Type Type
 
 instance Show Error where
  show (Duplicated      n)  = "Duplicated definition: " ++ n
@@ -31,6 +33,8 @@ instance Show Error where
  show (NotArray        ty) = "Type " ++ show ty ++ " is not an array" 
  show (ArrayAssignment ty) = "Array assignment: " ++ show ty
  show (Expected    ty ty') = "Expected: " ++ show ty ++ " Actual: " ++ show ty'
+ -- ERROR AGREGADO A MANOPLA
+ show (NotComparable    ty ty') = "Can't compare " ++ show ty ++ " with " ++ show ty'
 
 checkProgram :: Program -> Either [Error] Env
 checkProgram (Program pn defs body)  
@@ -543,7 +547,73 @@ getExpressionType errs (BoolLit bool) env = Right TyBool
 getExpressionType errs (Unary uop expr) env = getExpressionType errs expr env
 getExpressionType errs (Binary bop exp1 exp2) env
 	-- HAY QUE REFINAR ESTO
-	| bop == Or || bop == And || bop == Equ || bop == Less = Right TyBool
+	| bop == Or || bop == And = --ambas expresiones tienen que ser de tipo logico
+		case (getExpressionType [] exp1 env) of
+			Right ty1 ->
+				case (getExpressionType [] exp2 env) of
+					Right ty2 ->
+						if (ty1 == TyBool)
+						then
+							if (ty2 == TyBool)
+							then Right TyBool
+							else Left (errs ++ [(Expected TyBool ty2)])
+						else
+							if (ty2 == TyBool)
+							then Left (errs ++ [(Expected TyBool ty1)])
+							else Left (errs ++ [(Expected TyBool ty1),(Expected TyBool ty2)])
+					Left errs2 ->
+						if (ty1 == TyBool)
+						then Left (errs ++ [(Expected TyBool ty1)] ++ errs2)
+						else Left (errs ++ errs2)
+			Left errs1 ->
+				case (getExpressionType [] exp2 env) of
+					Right ty2 ->
+						if (ty2 == TyBool)
+						then Left (errs ++ errs1)
+						else Left (errs ++ errs1 ++ [(Expected TyBool ty2)])
+					Left errs2 -> Left (errs ++ errs1 ++ errs2)
+	| bop == Equ = --tienen que ser del mismo tipo las expresiones
+		case (getExpressionType [] exp1 env) of
+			Right ty1 ->
+				case (getExpressionType [] exp2 env) of
+					Right ty2 ->
+						if (ty1 == ty2)
+						then Right TyBool
+						else Left (errs ++ [(NotComparable ty1 ty2)])
+					Left errs2 -> Left (errs ++ errs2)
+			Left errs1 -> 
+				case (getExpressionType [] exp2 env) of
+					Right ty2 -> Left (errs ++ errs1)
+					Left errs2 -> Left (errs ++ errs1 ++ errs2)	
+	| bop == Less = -- las dos expresiones deben ser enteras
+	-- pero se debe devolver TyBool, no como el caso de las operaciones
+	-- enteras binarias
+		-- chequeo primera expresion de la operacion binaria
+		case (getExpressionType [] exp1 env) of
+			Right ty1 ->
+				-- chequeo segunda expresion de la operacion binaria
+				case (getExpressionType [] exp2 env) of
+					Right ty2 ->
+						if (ty1 == TyInt)
+						then
+							if (ty2 == TyInt)
+							then Right TyBool
+							else Left (errs ++ [(Expected TyInt ty2)])
+						else
+							if (ty2 == TyInt)
+							then Left (errs ++ [(Expected TyInt ty1)])
+							else Left (errs ++ [(Expected TyInt ty1), (Expected TyInt ty2)])
+					Left errs2 ->
+						if (ty1 == TyInt)
+						then Left (errs ++ errs2)
+						else Left (errs ++ [(Expected TyInt ty1)] ++ errs2)
+			Left errs1 ->
+				case (getExpressionType [] exp2 env) of
+					Right ty2 ->
+						if (ty2 == TyInt)
+						then Left (errs ++ errs1)
+						else Left (errs ++ errs1 ++ [(Expected TyInt ty2)])
+					Left errs2 -> Left (errs ++ errs1 ++ errs2)	
 	| otherwise = -- operaciones con enteros
 		-- chequeo primera expresion de la operacion binaria
 		case (getExpressionType [] exp1 env) of
