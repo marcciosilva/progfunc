@@ -509,14 +509,6 @@ getArrayType(TyArray ini fin ty) = getArrayType ty
 getTypeByName :: String -> Env -> Maybe Type
 getTypeByName name env = lookup name env
 
--- determina si una variable dada por su nombre y tipo esta
--- definida en env
-checkSameType :: String -> Env -> Type -> Bool
-checkSameType name env (TyArray ini fin ty) = length([var | var <- env, (fst var) == name && (snd var) == ty]) > 0
-checkSameType name env (TyInt) = length([var | var <- env, (fst var) == name && (snd var) == TyInt]) > 0
-checkSameType name env (TyBool) = length([var | var <- env, (fst var) == name && (snd var) == TyBool]) > 0
-
-
 checkIntegerArrayIndices :: [Expr] -> Env -> Type
 checkIntegerArrayIndices exps env =
 	case (getExpressionType [] (head exps) env) of
@@ -558,7 +550,21 @@ getExpressionType errs (Var name exps) env
 getExpressionType errs (IntLit int) env = Right TyInt
 getExpressionType errs (BoolLit bool) env = Right TyBool
 -- aca no concateno errs, tengo que pasarlo por parametro
-getExpressionType errs (Unary uop expr) env = getExpressionType errs expr env
+getExpressionType errs (Unary uop expr) env
+	| uop == Not = -- asumiendo que not debe aplicarse a expresiones logicas unicamente
+		case (getExpressionType [] expr env) of
+			Right ty ->
+				if (ty == TyBool)
+				then Right TyBool
+				else Left [(Expected TyBool ty)]
+			Left errsExpr -> Left errsExpr
+	| uop == Neg = -- asumiendo que neg debe aplicarse a expresiones enteras unicamente
+		case (getExpressionType [] expr env) of
+			Right ty ->
+				if (ty == TyInt)
+				then Right TyInt
+				else Left [(Expected TyInt ty)]
+			Left errsExpr -> Left errsExpr		
 getExpressionType errs (Binary bop exp1 exp2) env
 	-- HAY QUE REFINAR ESTO
 	| bop == Or || bop == And = --ambas expresiones tienen que ser de tipo logico
