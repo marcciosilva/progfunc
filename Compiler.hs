@@ -17,9 +17,9 @@ main = do args <- getArgs
 compileFile name = do prg <- readFile (name ++ ".pas")
                       case  compile prg of
                                Right cprg -> writeFile (name ++ ".c") cprg
-                               Left  errs -> putStr errs
+                               -- Left  errs -> putStr errs
                                -- habilitar para imprimir errores a archivo
-                               -- Left errs -> writeFile (name ++ ".ERR") errs
+                               Left errs -> writeFile (name ++ ".err") errs
 
 
 compile prg = case parser prg of
