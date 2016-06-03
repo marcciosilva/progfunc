@@ -592,21 +592,7 @@ getExpressionType errs (Binary bop exp1 exp2) env
 						then Left (errs ++ errs1)
 						else Left (errs ++ errs1 ++ [(Expected TyBool ty2)])
 					Left errs2 -> Left (errs ++ errs1 ++ errs2)
-	| bop == Equ = --tienen que ser del mismo tipo las expresiones
-		case (getExpressionType [] exp1 env) of
-			Right ty1 ->
-				case (getExpressionType [] exp2 env) of
-					Right ty2 ->
-						if (ty1 == ty2)
-						then Right TyBool
-						-- expresiones no comparables
-						else Left (errs ++ [(Expected ty1 ty2)])
-					Left errs2 -> Left (errs ++ errs2)
-			Left errs1 -> 
-				case (getExpressionType [] exp2 env) of
-					Right ty2 -> Left (errs ++ errs1)
-					Left errs2 -> Left (errs ++ errs1 ++ errs2)	
-	| bop == Less = -- las dos expresiones deben ser enteras
+	| bop == Less || bop == Equ = -- las dos expresiones deben ser enteras
 	-- pero se debe devolver TyBool, no como el caso de las operaciones
 	-- enteras binarias
 		-- chequeo primera expresion de la operacion binaria
