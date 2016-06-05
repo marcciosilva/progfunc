@@ -1,7 +1,11 @@
 #!/bin/bash
 if [ ! -f Compiler ]; then
-    make
+	echo -e "Iniciando compilación..."
+	make
+	echo -e "Compilación finalizada.\n"
 fi
+
+echo -e "Ejecuntando tests..."
 
 ./Compiler tests/ejemplo1
 ./Compiler tests/ejemplo2
@@ -11,4 +15,7 @@ fi
 ./Compiler tests/ejemplo6
 ./Compiler tests/ejemplo7
 
+echo -e "Ejecución de tests finalizada.\n"
+
+echo -e "Diff output:"
 diff tests/ ejemplos/

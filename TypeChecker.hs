@@ -12,6 +12,7 @@
 module TypeChecker where
 
 import Syntax
+import Control.Monad
 -- se pueden agregar mas importaciones 
 -- en caso de ser necesario
 
@@ -347,35 +348,26 @@ checkForStatement env errs exp1 exp2 bdy =
 checkStatement :: Env -> Stmt -> Either [Error] Env
 ------------------ ASIGNACION DE VARIABLES ------------------
 checkStatement env (Asig name exps expression) =
-	if (length exps > 0) -- posiblemente asignando un arreglo
-	then 
-		-- si todos los indices del acceso al arreglo son enteros
-		if (checkIntegerArrayIndices exps env == TyInt)
-		then
-			-- trato de comparar el valor de asignacion con lo que contiene el array
-			case (getTypeByName name env) of
+	if((length exps) > 0) 
+	then case (getTypeByName name env) of
 			-- si efectivamente es un array
-			Just (TyArray ini fin ty) ->
-				-- obtengo ultimo tipo, por si llega a ser multidimensional el arreglo
-				case (getExpressionType [] expression env) of
-					-- si la expresion tiene un tipo asignado
-					Right expType ->
-						if (expType /= TyInt && expType /= TyBool)
-						-- asignacion de un arreglo
-						then Left [(ArrayAssignment expType)]
-						else 
-							-- chequeo si el tipo de variables que guarda el array
-							-- se corresponde con el tipo de la expresion
-							if ((getArrayType ty) == expType)
-							then Right env
-							else Left [(Expected (getArrayType ty) expType)]
-					-- si la expresion esta indefinida por ejemplo
-					Left errs -> Left errs
-			Just (TyInt) -> Left [(NotArray TyInt)] -- no era un array lo de la izquierda
-			Just (TyBool) -> Left [(NotArray TyBool)] -- no era un array lo de la izquierda
-			Nothing -> Left [(Undefined name)] -- no pasa, dado que length exps > 0; es un array
-		-- tiro el tipo de indices usados
-		else Left [(Expected TyInt (checkIntegerArrayIndices exps env))]
+		Just (TyArray ini fin ty) -> if (checkIntegerArrayIndices exps env == TyInt)
+									then 
+										case (getExpressionType [] expression env) of
+											--si la expresion tiene un tipo asignado
+											Right expType ->
+											-- chequeo si el tipo de variables que guarda el array
+											-- se corresponde con el tipo de la expresion
+												case compare (checkArrayTypeDimensions(TyArray ini fin ty)) (length exps) of
+													LT -> Left [(NotArray expType)]
+													GT -> Left [(ArrayAssignment expType)]
+													EQ -> Right env
+											-- si la expresion esta indefinida por ejemplo
+											Left errs -> Left errs
+									else Left [(Expected TyInt (checkIntegerArrayIndices exps env))] 
+		Just (TyInt) -> Left [(NotArray TyInt)] -- no era un array lo de la izquierda
+		Just (TyBool) -> Left [(NotArray TyBool)] -- no era un array lo de la izquierda
+		Nothing -> Left [(Undefined name)] -- no pasa, dado que length exps > 0; es un array
 	-- si es una unica variable
 	else
 		case (getExpressionType [] expression env) of
@@ -652,3 +644,11 @@ getExpressionType errs (Binary bop exp1 exp2) env
 -- true si esta definida
 checkVarDefined :: String -> Env -> Bool
 checkVarDefined name env = length([name_temp | (name_temp, type_temp) <- env, name_temp == name]) > 0
+
+
+
+checkArrayTypeDimensions :: Type -> Int
+checkArrayTypeDimensions(TyArray ini fin ty) =  if (ty /= TyInt)
+												then (checkArrayTypeDimensions ty) + 1
+												else 1
+									  
