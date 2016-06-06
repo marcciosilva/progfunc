@@ -1,21 +1,29 @@
 #!/bin/bash
 if [ ! -f Compiler ]; then
-	echo -e "Iniciando compilación..."
-	make
-	echo -e "Compilación finalizada.\n"
+    make
 fi
 
-echo -e "Ejecuntando tests..."
+#toma entradas del inco
+./Compiler ejemplo1
+./Compiler ejemplo2
+./Compiler ejemplo3
+./Compiler ejemplo4
+./Compiler ejemplo5
+./Compiler ejemplo6
+./Compiler ejemplo7
 
-./Compiler tests/ejemplo1
-./Compiler tests/ejemplo2
-./Compiler tests/ejemplo3
-./Compiler tests/ejemplo4
-./Compiler tests/ejemplo5
-./Compiler tests/ejemplo6
-./Compiler tests/ejemplo7
+#test 1-3
+for i in `seq 1 3`
+do
+	echo "Testeando ejemplo $i"
+	diff out/ejemplo$i.c out-expected/ejemplo$i.c
+done
 
-echo -e "Ejecución de tests finalizada.\n"
+#test 4-8
+for i in `seq 4 8`
+do
+	echo "Testeando ejemplo $i"
+	diff out/ejemplo$i.err out-expected/ejemplo$i.err    
+done
 
-echo -e "Diff output:"
-diff tests/ ejemplos/
+#diff tests/ejemplo8.err ejemplos/ejemplo8.err    
