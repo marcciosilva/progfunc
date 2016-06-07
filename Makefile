@@ -3,4 +3,4 @@ Compiler : Compiler.hs Syntax.hs TypeChecker.hs Generator.hs
 
 clean :
 	rm -f *.hi *.o Compiler
-	rm -f tests/*.c tests/*.err
+	rm -f out/*.c out/*.err

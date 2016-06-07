@@ -1,0 +1,2 @@
+Expected: integer Actual: boolean
+Expected: boolean Actual: integer

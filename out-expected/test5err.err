@@ -1,0 +1,3 @@
+Expected: boolean Actual: integer
+Expected: integer Actual: boolean
+Undefined: y
