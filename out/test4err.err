@@ -1,4 +1,3 @@
 Expected: boolean Actual: integer
 Undefined: y
-Expected: integer Actual: boolean
 Expected: boolean Actual: integer

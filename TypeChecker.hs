@@ -583,13 +583,10 @@ getExpressionType errs (Binary bop exp1 exp2) env
                     Left errs2 ->
                         if (ty1 == TyBool)
                         then Left (errs ++ errs2)
-                        else Left (errs ++ [(Expected TyBool ty1)] ++ errs2)
+                        else Left (errs ++ errs2)
             Left errs1 ->
                 case (getExpressionType [] exp2 env) of
-                    Right ty2 ->
-                        if (ty2 == TyBool)
-                        then Left (errs ++ errs1)
-                        else Left (errs ++ errs1 ++ [(Expected TyBool ty2)])
+                    Right ty2 -> Left (errs ++ errs1)
                     Left errs2 -> Left (errs ++ errs1 ++ errs2)
     | bop == Less || bop == Equ = -- las dos expresiones deben ser enteras
     -- pero se debe devolver TyBool, no como el caso de las operaciones
@@ -609,16 +606,10 @@ getExpressionType errs (Binary bop exp1 exp2) env
                             if (ty2 == TyInt)
                             then Left (errs ++ [(Expected TyInt ty1)])
                             else Left (errs ++ [(Expected TyInt ty1), (Expected TyInt ty2)])
-                    Left errs2 ->
-                        if (ty1 == TyInt)
-                        then Left (errs ++ errs2)
-                        else Left (errs ++ [(Expected TyInt ty1)] ++ errs2)
+                    Left errs2 -> Left (errs ++ errs2)
             Left errs1 ->
                 case (getExpressionType [] exp2 env) of
-                    Right ty2 ->
-                        if (ty2 == TyInt)
-                        then Left (errs ++ errs1)
-                        else Left (errs ++ errs1 ++ [(Expected TyInt ty2)])
+                    Right ty2 -> Left (errs ++ errs1)
                     Left errs2 -> Left (errs ++ errs1 ++ errs2)    
     | otherwise = -- operaciones con enteros
         -- chequeo primera expresion de la operacion binaria
@@ -636,16 +627,10 @@ getExpressionType errs (Binary bop exp1 exp2) env
                             if (ty2 == TyInt)
                             then Left (errs ++ [(Expected TyInt ty1)])
                             else Left (errs ++ [(Expected TyInt ty1), (Expected TyInt ty2)])
-                    Left errs2 ->
-                        if (ty1 == TyInt)
-                        then Left (errs ++ errs2)
-                        else Left (errs ++ [(Expected TyInt ty1)] ++ errs2)
+                    Left errs2 -> Left (errs ++ errs2)
             Left errs1 ->
                 case (getExpressionType [] exp2 env) of
-                    Right ty2 ->
-                        if (ty2 == TyInt)
-                        then Left (errs ++ errs1)
-                        else Left (errs ++ errs1 ++ [(Expected TyInt ty2)])
+                    Right ty2 -> Left (errs ++ errs1)
                     Left errs2 -> Left (errs ++ errs1 ++ errs2)
 
 -- true si esta definida
