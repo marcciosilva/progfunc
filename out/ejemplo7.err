@@ -1,5 +1,0 @@
-Expected: integer Actual: boolean
-Expected: integer Actual: boolean
-Type integer is not an array
-Expected: integer Actual: boolean
-Array assignment: array [1 .. 2] of integer
