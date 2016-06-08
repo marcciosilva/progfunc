@@ -3,7 +3,7 @@ if [ ! -f Compiler ]; then
     make
 fi
 
-#compile ejemplo1-ejemplo7
+# #compile ejemplo1-ejemplo7
 # for i in `seq 1 8`
 # do
 # 	./Compiler ejemplo$i
@@ -30,14 +30,14 @@ fi
 ./Compiler test10
 ./Compiler test10err
 
-#prueba 1-3
+# #prueba 1-3
 # for i in `seq 1 3`
 # do
 # 	echo "Testeando ejemplo $i"
 # 	diff -w out/ejemplo$i.c out-expected/ejemplo$i.c
 # done
 
-#prueba 4-8
+# #prueba 4-8
 # for i in `seq 4 8`
 # do
 # 	echo "Testeando ejemplo $i"

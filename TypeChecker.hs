@@ -367,6 +367,7 @@ checkStatement env (Asig name exps expression) =
                                                     EQ -> 
                                                         if ((getArrayType ty) == expType)
                                                         then Right env
+                                                        -- chequear si el tipo de la derecha es array
                                                         else Left [(Expected (getArrayType ty) expType)]
                                             -- si la expresion esta indefinida por ejemplo
                                             Left errs -> Left errs
@@ -378,17 +379,25 @@ checkStatement env (Asig name exps expression) =
     else
         case (getExpressionType [] expression env) of
             Right expType ->
-                if (expType /= TyInt && expType /= TyBool)
-                -- asignacion de un arreglo
+                -- if (expType /= TyInt && expType /= TyBool)
+                -- -- asignacion de un arreglo
+                -- -- then Left [(ArrayAssignment expType)]
                 -- then Left [(ArrayAssignment expType)]
-                then Left [(ArrayAssignment expType)]
-                else
-                    case (getTypeByName name env) of
-                        Just ty ->
-                            if (ty == expType)
-                            then Right env
-                            else Left [(Expected ty expType)]
-                        Nothing -> Left [(Undefined name)]
+                -- else
+                --     case (getTypeByName name env) of
+                --         Just ty ->
+                --             if (ty == expType)
+                --             then Right env
+                --             else Left [(Expected ty expType)]
+                --         Nothing -> Left [(Undefined name)]
+                -- me fijo si la expresion de la derecha resulta un array
+                case (getTypeByName name env) of
+                    -- Just (TyArray ini fin ty) -> Left [(ArrayAssignment expType)]
+                    Just ty ->
+                        if (ty == expType)
+                        then Right env
+                        else Left [(Expected ty expType)]
+                    Nothing -> Left [(Undefined name)]                
             Left errs ->
                     case (getTypeByName name env) of
                         Just ty -> Left errs
@@ -536,6 +545,20 @@ getExpressionType errs (Var name exps) env
             case (getTypeByName name env) of
                 -- si efectivamente es un array
                 Just (TyArray ini fin ty) -> Right (getArrayType ty)
+                -- de acuerdo a la profundidad del acceso al array, hay que devolver un tipo acorde
+                -- que puede ser un array perfectamente
+                -- habria que hacer una funcion donde me pasen la cantidad de accesos que se hacen,
+                -- dada por (length exps), para determinar el tipo del array (pudiendo ser array of array...)
+                -- TODO:
+                    -- case compare (checkArrayTypeDimensions(TyArray ini fin ty)) (length exps) of
+                    --     LT -> Left [(NotArray expType)]
+                    --     GT -> 
+                    -- LLAMADO A FUNCION NUEVA
+                    --     EQ -> 
+                    --         if ((getArrayType ty) == expType)
+                    --         then Right env
+                    --         -- chequear si el tipo de la derecha es array
+                    --         else Left [(Expected (getArrayType ty) expType)]
                 Just (TyInt) -> Left [(NotArray TyInt)] -- no era un array
                 Just (TyBool) -> Left [(NotArray TyBool)] -- no era un array
                 Nothing -> Left [(Undefined name)] -- puede pasar que se intente a acceder
