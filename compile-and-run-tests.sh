@@ -5,13 +5,13 @@ fi
 
 for i in {1..8}
 do
-	./Compiler ejemplo${i}
+	./Compiler tests/ejemplo${i}
 done
 
 for i in {1..10}
 do
-	./Compiler test${i}
-	./Compiler test${i}err
+	./Compiler tests/test${i}
+	./Compiler tests/test${i}err
 done
 
 echo "Testeando ejemplo1"
