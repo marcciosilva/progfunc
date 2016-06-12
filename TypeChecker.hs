@@ -128,7 +128,10 @@ checkStatement env (Asig name exps expression)
 									else case (getExpressionType expression env) of
 											Right expType -> Just errInt
 											Left errExp -> Just (errInt ++ errExp)
-			Nothing -> Just [(Undefined name)]
+			Nothing -> 	-- procedo a chequar la expresión de la derecha
+						case (getExpressionType expression env) of
+							Right expType -> Just [(Undefined name)]
+							Left errExp -> Just ([(Undefined name)] ++ errExp)
 		
 	| otherwise = 	case (getTypeByName name env) of
 						Just ty -> 	if (isArray ty) 
@@ -139,7 +142,10 @@ checkStatement env (Asig name exps expression)
 												then Nothing
 												else Just [(Expected ty expType)]
 											Left errExp -> Just errExp
-						Nothing -> Just [(Undefined name)]                
+						Nothing -> 	-- procedo a chequar la expresión de la derecha
+									case (getExpressionType expression env) of
+										Right expType -> Just [(Undefined name)]
+										Left errExp -> Just ([(Undefined name)] ++ errExp)
 ------------------ ASIGNACION DE VARIABLES ------------------
 ------------------ IF ------------------
 checkStatement env (If expression bdy1 bdy2) = 
@@ -608,7 +614,10 @@ getExpressionType (Binary bop exp1 exp2) env
                     Left errs2 -> Left errs2
             Left errs1 ->
 					if (isErrorUndefined (last errs1))
-					then Left errs1
+					then  -- chequeo segunda expresion de la operacion binaria
+						case (getExpressionType exp2 env) of
+						Right ty2 -> Left errs1
+						Left errs2 -> Left (errs1 ++ errs2)
 					else 
 						-- chequeo segunda expresion de la operacion binaria
 						case (getExpressionType exp2 env) of
@@ -640,7 +649,10 @@ getExpressionType (Binary bop exp1 exp2) env
                     Left errs2 -> Left errs2
             Left errs1 ->
 					if (isErrorUndefined (last errs1))
-					then Left errs1
+					then  -- chequeo segunda expresion de la operacion binaria
+						case (getExpressionType exp2 env) of
+						Right ty2 -> Left errs1
+						Left errs2 -> Left (errs1 ++ errs2)
 					else 
 						-- chequeo segunda expresion de la operacion binaria
 						case (getExpressionType exp2 env) of
@@ -669,7 +681,10 @@ getExpressionType (Binary bop exp1 exp2) env
                     Left errs2 -> Left errs2
             Left errs1 ->
 					if (isErrorUndefined (last errs1))
-					then Left errs1
+					then -- chequeo segunda expresion de la operacion binaria
+						case (getExpressionType exp2 env) of
+						Right ty2 -> Left errs1
+						Left errs2 -> Left (errs1 ++ errs2)
 					else 
 						-- chequeo segunda expresion de la operacion binaria
 						case (getExpressionType exp2 env) of
