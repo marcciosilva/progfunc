@@ -3,48 +3,33 @@ if [ ! -f Compiler ]; then
     make
 fi
 
-# #compile ejemplo1-ejemplo7
-# for i in `seq 1 8`
-# do
-# 	./Compiler ejemplo$i
-# done
+for i in {1..8}
+do
+	./Compiler ejemplo${i}
+done
 
-./Compiler test1
-./Compiler test1err
-./Compiler test2
-./Compiler test2err
-./Compiler test3
-./Compiler test3err
-./Compiler test4
-./Compiler test4err
-./Compiler test5
-./Compiler test5err
-./Compiler test6
-./Compiler test6err
-./Compiler test7
-./Compiler test7err
-./Compiler test8
-./Compiler test8err
-./Compiler test9
-./Compiler test9err
-./Compiler test10
-./Compiler test10err
+for i in {1..10}
+do
+	./Compiler test${i}
+	./Compiler test${i}err
+done
 
-# #prueba 1-3
-# for i in `seq 1 3`
-# do
-# 	echo "Testeando ejemplo $i"
-# 	diff -w out/ejemplo$i.c out-expected/ejemplo$i.c
-# done
-
-# #prueba 4-8
-# for i in `seq 4 8`
-# do
-# 	echo "Testeando ejemplo $i"
-# 	diff -w out/ejemplo$i.err out-expected/ejemplo$i.err    
-# done
-
-
+echo "Testeando ejemplo1"
+diff -w out/ejemplo1.c out-expected/ejemplo1.c
+echo "Testeando ejemplo2"
+diff -w out/ejemplo2.c out-expected/ejemplo2.c
+echo "Testeando ejemplo3"
+diff -w out/ejemplo3.c out-expected/ejemplo3.c
+echo "Testeando ejemplo4"
+diff -w out/ejemplo4.err out-expected/ejemplo4.err
+echo "Testeando ejemplo5"
+diff -w out/ejemplo5.err out-expected/ejemplo5.err
+echo "Testeando ejemplo6"
+diff -w out/ejemplo6.err out-expected/ejemplo6.err
+echo "Testeando ejemplo7"
+diff -w out/ejemplo7.err out-expected/ejemplo7.err
+echo "Testeando ejemplo8"
+diff -w out/ejemplo8.err out-expected/ejemplo8.err
 echo "Testeando test1"
 diff -w out/test1.c out-expected/test1.c
 echo "Testeando test1err"
