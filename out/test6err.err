@@ -2,4 +2,4 @@ Expected: integer Actual: boolean
 Expected: integer Actual: boolean
 Expected: integer Actual: boolean
 Expected: boolean Actual: array [1 .. 5] of array [1 .. 5] of boolean
-Expected: integer Actual: array [1 .. 5] of boolean
+Array assignment: array [1 .. 5] of boolean
