@@ -2,3 +2,6 @@ Expected: integer Actual: array [1 .. 10] of integer
 Array assignment: array [1 .. 10] of integer
 Array assignment: array [1 .. 10] of integer
 Array assignment: array [1 .. 10] of integer
+Array assignment: array [1 .. 10] of integer
+Array assignment: array [1 .. 10] of integer
+Array assignment: array [1 .. 10] of integer
