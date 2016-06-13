@@ -52,20 +52,20 @@ checkVarDef vs errs env
                             -- errores en orden de ocurrencia
                             Left err -> checkVarDef (tail vs) (errs ++ [err]) env
 
-	-- se agregaron todas las vars a env pero hubo errores
-	| length errs /= 0 = Left errs            
+    -- se agregaron todas las vars a env pero hubo errores
+    | length errs /= 0 = Left errs            
     
-	-- se agregaron todas las vars a env sin errores                
-	| otherwise = Right env    
+    -- se agregaron todas las vars a env sin errores                
+    | otherwise = Right env    
 
     
 checkSingleVar :: VarDef -> Env -> Either Error Env
 checkSingleVar (VarDef name type1) env 
-	-- Variable repetida
-	| containsVariable env (name, type1) = Left (Duplicated name)
+    -- Variable repetida
+    | containsVariable env (name, type1) = Left (Duplicated name)
     
-	-- agrego variable al final para declararlas en orden de ocurrencia en el .pas
-	| otherwise = Right (env ++ [(name, type1)])
+    -- agrego variable al final para declararlas en orden de ocurrencia en el .pas
+    | otherwise = Right (env ++ [(name, type1)])
 
     
 -- chequea si la variable ya esta definida en env
@@ -86,66 +86,66 @@ checkBody env stmts = checkStatements env [] stmts
 
 checkStatements :: Env -> [Error] -> [Stmt] -> Either [Error] Env
 checkStatements env errs stmts
-	| (length stmts) /= 0 = case checkStatement env (head stmts) of
-								-- agrego error al final para mostrar los 
-								-- errores en orden de ocurrencia
-								Just errLst -> checkStatements env (errs ++ errLst) (tail stmts)
-								Nothing -> checkStatements env errs (tail stmts)
-	-- se terminaron de chequear los stms y hubo errores
-	| length errs /= 0 = Left errs            
+    | (length stmts) /= 0 = case checkStatement env (head stmts) of
+                                -- agrego error al final para mostrar los 
+                                -- errores en orden de ocurrencia
+                                Just errLst -> checkStatements env (errs ++ errLst) (tail stmts)
+                                Nothing -> checkStatements env errs (tail stmts)
+    -- se terminaron de chequear los stms y hubo errores
+    | length errs /= 0 = Left errs            
     
-	-- se terminaron de chequear los stms sin errores                
-	| otherwise = Right env    
+    -- se terminaron de chequear los stms sin errores                
+    | otherwise = Right env    
 
 
 checkStatement :: Env -> Stmt -> Maybe [Error]
 ------------------ ASIGNACION DE VARIABLES ------------------
 checkStatement env (Asig name exps expression)
-	| (length exps) > 0 =
+    | (length exps) > 0 =
 -- chequeo que la variable esté definida
-		case (getTypeByName name env) of
-			Just ty ->
-				-- si todos los indices del acceso al arreglo son enteros
-				case (checkIntegerArrayIndices exps env) of
-					Right typ -> 
-						-- trato de comparar el valor de asignacion con lo que contiene el array
-						if (isArray ty) then
-							-- si efectivamente es un array
-								case compare (checkArrayTypeDimensions ty) (length exps) of
-									LT -> 	Just [(NotArray typ)]
-									GT -> 	Just [(ArrayAssignment (getLastArrayType ty))]
-									EQ ->
-										-- procedo a chequar la expresión de la derecha
-										case (getExpressionType expression env) of
-											Right expType ->
-													if ((getArrayType ty) == expType)
-													then Nothing
-													else Just [(Expected (getArrayType ty) expType)]
-											Left errExp -> Just errExp
-						else Just [(NotArray ty)]
-					Left errInt -> 	if (isErrorUndefined (last errInt))
-									then Just errInt
-									else case (getExpressionType expression env) of
-											Right expType -> Just errInt
-											Left errExp -> Just (errInt ++ errExp)
-			Nothing -> 	-- procedo a chequar la expresión de la derecha
-						case (getExpressionType expression env) of
-							Right expType -> Just [(Undefined name)]
-							Left errExp -> Just ([(Undefined name)] ++ errExp)
-		
-	| otherwise = 	case (getTypeByName name env) of
-						Just ty -> 	if (isArray ty) 
-									then Just [(ArrayAssignment ty)]
-									else case (getExpressionType expression env) of
-											Right expType ->
-												if (ty == expType)
-												then Nothing
-												else Just [(Expected ty expType)]
-											Left errExp -> Just errExp
-						Nothing -> 	-- procedo a chequar la expresión de la derecha
-									case (getExpressionType expression env) of
-										Right expType -> Just [(Undefined name)]
-										Left errExp -> Just ([(Undefined name)] ++ errExp)
+        case (getTypeByName name env) of
+            Just ty ->
+                -- si todos los indices del acceso al arreglo son enteros
+                case (checkIntegerArrayIndices exps env) of
+                    Right typ -> 
+                        -- trato de comparar el valor de asignacion con lo que contiene el array
+                        if (isArray ty) then
+                            -- si efectivamente es un array
+                                case compare (checkArrayTypeDimensions ty) (length exps) of
+                                    LT ->     Just [(NotArray typ)]
+                                    GT ->     Just [(ArrayAssignment (getLastArrayType ty))]
+                                    EQ ->
+                                        -- procedo a chequar la expresión de la derecha
+                                        case (getExpressionType expression env) of
+                                            Right expType ->
+                                                    if ((getArrayType ty) == expType)
+                                                    then Nothing
+                                                    else Just [(Expected (getArrayType ty) expType)]
+                                            Left errExp -> Just errExp
+                        else Just [(NotArray ty)]
+                    Left errInt ->     if (isErrorUndefined (last errInt))
+                                    then Just errInt
+                                    else case (getExpressionType expression env) of
+                                            Right expType -> Just errInt
+                                            Left errExp -> Just (errInt ++ errExp)
+            Nothing ->     -- procedo a chequar la expresión de la derecha
+                        case (getExpressionType expression env) of
+                            Right expType -> Just [(Undefined name)]
+                            Left errExp -> Just ([(Undefined name)] ++ errExp)
+        
+    | otherwise =     case (getTypeByName name env) of
+                        Just ty ->     if (isArray ty) 
+                                    then Just [(ArrayAssignment ty)]
+                                    else case (getExpressionType expression env) of
+                                            Right expType ->
+                                                if (ty == expType)
+                                                then Nothing
+                                                else Just [(Expected ty expType)]
+                                            Left errExp -> Just errExp
+                        Nothing ->     -- procedo a chequar la expresión de la derecha
+                                    case (getExpressionType expression env) of
+                                        Right expType -> Just [(Undefined name)]
+                                        Left errExp -> Just ([(Undefined name)] ++ errExp)
 ------------------ ASIGNACION DE VARIABLES ------------------
 ------------------ IF ------------------
 checkStatement env (If expression bdy1 bdy2) = 
@@ -203,7 +203,7 @@ checkStatement env (If expression bdy1 bdy2) =
 ------------------ IF ------------------
 ------------------ FOR ------------------
 checkStatement env (For name exp1 exp2 bdy) =  
-	-- chequeo si variable de iteracion default esta definida
+    -- chequeo si variable de iteracion default esta definida
     if ((checkVarDefined name env) == False)
     then
         case (getExpressionType exp1 env) of
@@ -481,7 +481,7 @@ checkStatement env (Write expression) =
             if (ty /= TyInt)
             -- lo que se le pasa al writeln no es de tipo entero
             then Just [(Expected TyInt ty)]
-			else Nothing
+            else Nothing
         Left errsExp -> Just errsExp
 ------------------ WRITE ------------------
 ------------------ READ ------------------
@@ -510,8 +510,8 @@ isTypeSimple (TyArray ini fin ty) = False
 
 getLastArrayType :: Type -> Type
 getLastArrayType (TyArray ini fin ty) = if(isTypeSimple ty)
-										then (TyArray ini fin ty)
-										else getLastArrayType ty
+                                        then (TyArray ini fin ty)
+                                        else getLastArrayType ty
 
 
 -- devuelve el tipo de una variable si esta se encuentra definida en el ambiente (sino nada)
@@ -522,21 +522,21 @@ getTypeByName name env = lookup name env
 -- chequea que las expresiones de los indices de un array sean correctas, y frena al primer error
 checkIntegerArrayIndices :: [Expr] -> Env -> Either [Error] Type
 checkIntegerArrayIndices exps env =
-	case (getExpressionType (head exps) env) of
-		Right ty ->
-			if (ty == TyInt)
-			then 	if (length (tail exps) > 0)
-					then checkIntegerArrayIndices (tail exps) env
-					else Right TyInt
-			else Left [(Expected TyInt ty)]
-		Left errsExp -> Left errsExp
+    case (getExpressionType (head exps) env) of
+        Right ty ->
+            if (ty == TyInt)
+            then     if (length (tail exps) > 0)
+                    then checkIntegerArrayIndices (tail exps) env
+                    else Right TyInt
+            else Left [(Expected TyInt ty)]
+        Left errsExp -> Left errsExp
 
 
-					
+                    
 getArrayTypeByDim :: Type -> Int -> Either [Error] Type
 getArrayTypeByDim (TyArray ini fin ty) x
-	| x == 0 = Right (TyArray ini fin ty)
-	| otherwise = getArrayTypeByDim ty (x-1)
+    | x == 0 = Right (TyArray ini fin ty)
+    | otherwise = getArrayTypeByDim ty (x-1)
 
 
 -- encuentra el tipo de una expresion
@@ -544,28 +544,28 @@ getExpressionType :: Expr -> Env -> Either [Error] Type
 -- acceso a arreglo
 -- asumiendo que los indices son del mismo tipo y esta todo bien
 getExpressionType (Var name exps) env
-	-- caso en que la expresión tiene forma de un arreglo
-	| length exps /= 0 =
-		-- chequeo que la variable esté definida
-		case (getTypeByName name env) of
-			Just ty ->
-				-- si todos los indices del acceso al arreglo son enteros
-				case (checkIntegerArrayIndices exps env) of
-					Right typ -> 
-						if (isArray ty) then
-							-- si efectivamente es un array
-								case compare (checkArrayTypeDimensions ty) (length exps) of
-									LT -> 	getArrayTypeByDim ty (length exps)
-									GT -> 	getArrayTypeByDim ty (length exps)
-									EQ -> 	Right typ
-						else Left [(NotArray ty)]
-					Left errInt -> Left errInt
-			Nothing -> Left [(Undefined name)]
+    -- caso en que la expresión tiene forma de un arreglo
+    | length exps /= 0 =
+        -- chequeo que la variable esté definida
+        case (getTypeByName name env) of
+            Just ty ->
+                -- si todos los indices del acceso al arreglo son enteros
+                case (checkIntegerArrayIndices exps env) of
+                    Right typ -> 
+                        if (isArray ty) then
+                            -- si efectivamente es un array
+                                case compare (checkArrayTypeDimensions ty) (length exps) of
+                                    LT ->     getArrayTypeByDim ty (length exps)
+                                    GT ->     getArrayTypeByDim ty (length exps)
+                                    EQ ->     Right typ
+                        else Left [(NotArray ty)]
+                    Left errInt -> Left errInt
+            Nothing -> Left [(Undefined name)]
 
-	-- si es simplemente una referencia a una variable, devuelve su tipo
-	| otherwise = case (getTypeByName name env) of
-					Just ty -> Right ty
-					Nothing -> Left [(Undefined name)]
+    -- si es simplemente una referencia a una variable, devuelve su tipo
+    | otherwise = case (getTypeByName name env) of
+                    Just ty -> Right ty
+                    Nothing -> Left [(Undefined name)]
 
 
 {-================ CHEQUEO DE LITERALES ===============-}
@@ -575,29 +575,29 @@ getExpressionType (BoolLit bool) env = Right TyBool
 
 {-================ CHEQUEO DE EXPRESIONES UNARIAS ===============-} 
 getExpressionType (Unary uop expr) env
-	 -- asumiendo que neg debe aplicarse a expresiones booleanas unicamente
-	| uop == Not = 
-		case (getExpressionType expr env) of
-			Right ty ->
-				if (ty == TyBool)
-				then Right TyBool
-				else Left [(Expected TyBool ty)]
-			Left errsExpr -> Left errsExpr
+     -- asumiendo que neg debe aplicarse a expresiones booleanas unicamente
+    | uop == Not = 
+        case (getExpressionType expr env) of
+            Right ty ->
+                if (ty == TyBool)
+                then Right TyBool
+                else Left [(Expected TyBool ty)]
+            Left errsExpr -> Left errsExpr
 
-	 -- asumiendo que neg debe aplicarse a expresiones enteras unicamente
-	| uop == Neg =
-		case (getExpressionType expr env) of
-			Right ty ->
-				if (ty == TyInt)
-				then Right TyInt
-				else Left [(Expected TyInt ty)]
-			Left errsExpr -> Left errsExpr
+     -- asumiendo que neg debe aplicarse a expresiones enteras unicamente
+    | uop == Neg =
+        case (getExpressionType expr env) of
+            Right ty ->
+                if (ty == TyInt)
+                then Right TyInt
+                else Left [(Expected TyInt ty)]
+            Left errsExpr -> Left errsExpr
 
             
 {-================ CHEQUEO DE EXPRESIONES BINARIAS ===============-}            
 getExpressionType (Binary bop exp1 exp2) env
-	--ambas expresiones tienen que ser de tipo logico
-	| bop == Or || bop == And =
+    --ambas expresiones tienen que ser de tipo logico
+    | bop == Or || bop == And =
         case (getExpressionType exp1 env) of
             Right ty1 ->
                 case (getExpressionType exp2 env) of
@@ -613,22 +613,22 @@ getExpressionType (Binary bop exp1 exp2) env
                             else Left [(Expected TyBool ty1),(Expected TyBool ty2)]
                     Left errs2 -> Left errs2
             Left errs1 ->
-					if (isErrorUndefined (last errs1))
-					then  -- chequeo segunda expresion de la operacion binaria
-						case (getExpressionType exp2 env) of
-						Right ty2 -> Left errs1
-						Left errs2 -> Left (errs1 ++ errs2)
-					else 
-						-- chequeo segunda expresion de la operacion binaria
-						case (getExpressionType exp2 env) of
-						Right ty2 ->
-							if (ty2 == TyBool)
-							then Left errs1
-							else Left (errs1 ++ [(Expected TyInt ty2)])
-						Left errs2 -> Left (errs1 ++ errs2)
+                    if (isErrorUndefined (last errs1))
+                    then  -- chequeo segunda expresion de la operacion binaria
+                        case (getExpressionType exp2 env) of
+                        Right ty2 -> Left errs1
+                        Left errs2 -> Left (errs1 ++ errs2)
+                    else 
+                        -- chequeo segunda expresion de la operacion binaria
+                        case (getExpressionType exp2 env) of
+                        Right ty2 ->
+                            if (ty2 == TyBool)
+                            then Left errs1
+                            else Left (errs1 ++ [(Expected TyInt ty2)])
+                        Left errs2 -> Left (errs1 ++ errs2)
 
-	-- las dos expresiones deben ser enteras
-	| bop == Less || bop == Equ =
+    -- las dos expresiones deben ser enteras
+    | bop == Less || bop == Equ =
     -- pero se debe devolver TyBool, no como el caso de las operaciones
     -- enteras binarias
         -- chequeo primera expresion de la operacion binaria
@@ -648,19 +648,19 @@ getExpressionType (Binary bop exp1 exp2) env
                             else Left [(Expected TyInt ty1), (Expected TyInt ty2)]
                     Left errs2 -> Left errs2
             Left errs1 ->
-					if (isErrorUndefined (last errs1))
-					then  -- chequeo segunda expresion de la operacion binaria
-						case (getExpressionType exp2 env) of
-						Right ty2 -> Left errs1
-						Left errs2 -> Left (errs1 ++ errs2)
-					else 
-						-- chequeo segunda expresion de la operacion binaria
-						case (getExpressionType exp2 env) of
-						Right ty2 ->
-							if (ty2 == TyInt)
-							then Left errs1
-							else Left (errs1 ++ [(Expected TyInt ty2)])
-						Left errs2 -> Left (errs1 ++ errs2)
+                    if (isErrorUndefined (last errs1))
+                    then  -- chequeo segunda expresion de la operacion binaria
+                        case (getExpressionType exp2 env) of
+                        Right ty2 -> Left errs1
+                        Left errs2 -> Left (errs1 ++ errs2)
+                    else 
+                        -- chequeo segunda expresion de la operacion binaria
+                        case (getExpressionType exp2 env) of
+                        Right ty2 ->
+                            if (ty2 == TyInt)
+                            then Left errs1
+                            else Left (errs1 ++ [(Expected TyInt ty2)])
+                        Left errs2 -> Left (errs1 ++ errs2)
                     
    | otherwise = -- operaciones con enteros
         -- chequeo primera expresion de la operacion binaria
@@ -680,19 +680,19 @@ getExpressionType (Binary bop exp1 exp2) env
                             else Left [(Expected TyInt ty1), (Expected TyInt ty2)]
                     Left errs2 -> Left errs2
             Left errs1 ->
-					if (isErrorUndefined (last errs1))
-					then -- chequeo segunda expresion de la operacion binaria
-						case (getExpressionType exp2 env) of
-						Right ty2 -> Left errs1
-						Left errs2 -> Left (errs1 ++ errs2)
-					else 
-						-- chequeo segunda expresion de la operacion binaria
-						case (getExpressionType exp2 env) of
-						Right ty2 ->
-							if (ty2 == TyInt)
-							then Left errs1
-							else Left (errs1 ++ [(Expected TyInt ty2)])
-						Left errs2 -> Left (errs1 ++ errs2)
+                    if (isErrorUndefined (last errs1))
+                    then -- chequeo segunda expresion de la operacion binaria
+                        case (getExpressionType exp2 env) of
+                        Right ty2 -> Left errs1
+                        Left errs2 -> Left (errs1 ++ errs2)
+                    else 
+                        -- chequeo segunda expresion de la operacion binaria
+                        case (getExpressionType exp2 env) of
+                        Right ty2 ->
+                            if (ty2 == TyInt)
+                            then Left errs1
+                            else Left (errs1 ++ [(Expected TyInt ty2)])
+                        Left errs2 -> Left (errs1 ++ errs2)
 
 
 -- true si esta definida
